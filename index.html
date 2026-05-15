@@ -837,7 +837,11 @@ function App() {
     function groupAndSet(data) {
       if (!Array.isArray(data) || data.length === 0) return false;
       const grouped = { paddle:[], trips:[], volunteer:[], patrol:[], training:[] };
-      data.forEach(e => { (grouped[e.category || 'training'] ||= []).push(e); });
+      data.forEach(e => {
+        const cat = e.category || 'training';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(e);
+      });
       grouped.paddle = grouped.paddle.slice(0, 6);
       setLive(grouped);
       return true;
