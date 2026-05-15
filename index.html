@@ -952,7 +952,7 @@ function App() {
             {TABS.map(t => (
               <button key={t.id} className={"rsvp-tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
                 {t.label}
-                {!evLoading && tabCounts[t.id] > 0 && (
+                {tabCounts[t.id] > 0 && (
                   <span className="count">{tabCounts[t.id]}</span>
                 )}
               </button>
