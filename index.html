@@ -518,80 +518,71 @@ function AnnouncementBanner() {
 // ─────────────────────────────────────────────────────────────
 const { useState, useMemo } = React;
 
-// ─── data ─────────────────────────────────────
-const initialSessions = {
-  paddle: [
-    { id: "p1", month:"MAY", day:17, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:42, total:60, tag:"hot" },
-    { id: "p2", month:"MAY", day:18, dow:"Sunday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:28, total:60 },
-    { id: "p3", month:"MAY", day:24, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:60, total:60 },
-    { id: "p4", month:"MAY", day:25, dow:"Sunday", title:"Stand-Up Paddle Day", where:"Maxwell Place Cove · SUP focus", time:"10am–2pm", window:"All levels", spots:14, total:30 },
-    { id: "p5", month:"MAY", day:31, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:0, total:60 },
-  ],
-  volunteer: [
-    { id: "v1", month:"MAY", day:15, dow:"Thursday", title:"Volunteer Orientation", where:"Boathouse · For new volunteers", time:"6:30pm–8pm", window:"On land", spots:6, total:15, tag:"new" },
-    { id: "v2", month:"MAY", day:17, dow:"Saturday", title:"Saturday Crew · Beach + Boats", where:"Maxwell Place · Help run paddle day", time:"8am–4:30pm", window:"Full day", spots:9, total:18 },
-    { id: "v3", month:"MAY", day:18, dow:"Sunday", title:"Sunday Crew · Beach + Boats", where:"Maxwell Place · Help run paddle day", time:"8am–4:30pm", window:"Full day", spots:11, total:18 },
-    { id: "v4", month:"MAY", day:21, dow:"Wednesday", title:"Boat Maintenance Night", where:"Boathouse · Bring sneakers", time:"6pm–9pm", window:"Open shift", spots:8, total:12 },
-  ],
-  trips: [
-    { id: "t1", month:"MAY", day:24, dow:"Saturday", title:"Liberty Island Loop", where:"Volunteers only · Sea kayak · 10mi", time:"7am–12pm", window:"Intermediate+", spots:5, total:10, tag:"trip" },
-    { id: "t2", month:"JUN", day:7, dow:"Saturday", title:"Manhattan Circumnavigation", where:"Volunteers only · 30mi · Full day", time:"5:30am–7pm", window:"Advanced", spots:2, total:8, tag:"trip" },
-    { id: "t3", month:"JUN", day:14, dow:"Saturday", title:"Brooklyn Bridge → Red Hook", where:"Volunteers only · 8mi", time:"8am–1pm", window:"Intermediate", spots:7, total:10 },
-  ],
-  patrol: [
-    { id: "pp1", month:"MAY", day:18, dow:"Sunday", title:"Planet Patrol · Litter Pick", where:"Cove + Pier · Bring a hat", time:"10am–12pm", window:"All ages", spots:18, total:30 },
-    { id: "pp2", month:"JUN", day:1, dow:"Sunday", title:"Planet Patrol · Litter Pick", where:"Cove + Pier · Bring a hat", time:"10am–12pm", window:"All ages", spots:24, total:30 },
-  ],
-};
-
-const tabs = [
-  { id: "paddle", label: "Free Paddle Days" },
-  { id: "volunteer", label: "Volunteer Shifts" },
-  { id: "trips", label: "River Trips" },
-  { id: "patrol", label: "Planet Patrol" },
+// ─── Live Meetup data config ───────────────────
+const TABS = [
+  { id: "paddle",   label: "Free Paddle Days" },
+  { id: "trips",    label: "River Trips" },
+  { id: "volunteer",label: "Volunteer Shifts" },
+  { id: "patrol",   label: "Planet Patrol" },
+  { id: "training", label: "Volunteer Trips & Training" },
 ];
 
-// ─── components ───────────────────────────────
-function Session({ s, rsvped, onRsvp }) {
-  const isFull = s.spots <= 0 && !rsvped;
-  const remaining = rsvped ? s.spots - 1 : s.spots;
+// Format "2026-05-17" → "Sat, May 17"
+function fmtDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+}
+// Format "09:00" → "9am"
+function fmtTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 || 12;
+  return m === 0 ? `${h12}${ap}` : `${h12}:${String(m).padStart(2,'0')}${ap}`;
+}
+
+// ─── Session card (live Meetup data) ──────────
+function Session({ s }) {
+  const { month, day, dow } = React.useMemo(() => {
+    const d = new Date(s.date + 'T' + (s.time || '12:00'));
+    return {
+      month: d.toLocaleString('en-US', { month:'short' }).toUpperCase(),
+      day:   d.getDate(),
+      dow:   d.toLocaleString('en-US', { weekday:'long' }),
+    };
+  }, [s.date, s.time]);
+
   return (
-    <article className={"session" + (isFull ? " full" : "")}>
+    <article className="session">
       <div className="date-block">
-        <span className="month">{s.month}</span>
-        <span className="day">{s.day}</span>
-        <span className="dow">{s.dow}</span>
+        <span className="month">{month}</span>
+        <span className="day">{day}</span>
+        <span className="dow">{dow}</span>
       </div>
       <div>
-        <h4 className="title">{s.title}</h4>
-        <div className="where">{s.where}</div>
+        <h4 className="title">{s.name}</h4>
+        <div className="where">Maxwell Place Cove · Hoboken, NJ</div>
         <div className="tags">
-          {s.tag === "hot" && <span className="tag hot">Almost full</span>}
-          {s.tag === "new" && <span className="tag hot">New volunteers</span>}
-          {s.tag === "trip" && <span className="tag hot">River trip</span>}
-          {s.spots === 0 && !rsvped && <span className="tag" style={{background:"var(--ink)",color:"#fff",borderColor:"var(--ink)"}}>Waitlist</span>}
-          <span className="tag">{s.window}</span>
+          <span className="tag">Free</span>
           <span className="tag">Waiver req'd</span>
+          <span className="tag">All ages 5+</span>
         </div>
       </div>
       <div className="time">
-        {s.time}<small>EDT · Maxwell Pl</small>
+        {fmtTime(s.time) || 'See Meetup'}<small>EDT · Maxwell Pl</small>
       </div>
       <div className="spots">
-        <span>Spots remaining</span>
-        <b>{rsvped ? `${remaining} / ${s.total} (you're #${s.total - remaining})` : `${s.spots} / ${s.total}`}</b>
-        <div className="spots-bar" style={{marginBottom:4}}>
-          <span style={{width: `${Math.max(0, (rsvped ? remaining : s.spots) / s.total * 100)}%`, background: (rsvped ? remaining : s.spots) <= 5 ? "var(--orange)" : "var(--algae)"}} />
+        <span>Registration</span>
+        <b style={{color:'var(--teal)'}}>Open on Meetup</b>
+        <div style={{fontSize:'12px',color:'var(--ink-2)',marginTop:'4px',fontFamily:'"JetBrains Mono",monospace',letterSpacing:'.05em'}}>
+          Spots listed on event page
         </div>
       </div>
       <div>
-        <button
-          className={"rsvp-btn" + (rsvped ? " in" : "")}
-          disabled={isFull}
-          onClick={() => onRsvp(s.id)}>
-          {rsvped ? "✓ You're in" : isFull ? "Waitlist" : "RSVP"}
-        </button>
-        <div className="add-cal">{rsvped ? "Add to calendar ↓" : "Free · 1-click"}</div>
+        <a href={s.url} target="_blank" rel="noopener noreferrer" className="rsvp-btn">
+          RSVP on Meetup
+        </a>
+        <div className="add-cal">Redirects to Meetup →</div>
       </div>
     </article>
   );
@@ -753,36 +744,48 @@ function LiveEvents() {
 
 // ─────────────────────────────────────────────────────
 function App() {
-  const [tab, setTab] = useState("paddle");
-  const [sessions] = useState(initialSessions);
-  const [rsvps, setRsvps] = useState(new Set());
-  const [amt, setAmt] = useState(50);
-  const [heroRsvp, setHeroRsvp] = useState(false);
+  const [tab, setTab]           = useState("paddle");
+  const [liveEvents, setLive]   = useState({});
+  const [evLoading, setEvLoad]  = useState(true);
+  const [amt, setAmt]           = useState(50);
   const [donateOpen, setDonateOpen] = useState(false);
 
-  const toggleRsvp = (id) => {
-    setRsvps(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  // Fetch all Meetup events once on load, group by category
+  React.useEffect(() => {
+    fetch('/.netlify/functions/meetup-events')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error();
+        const grouped = { paddle:[], trips:[], volunteer:[], patrol:[], training:[] };
+        data.forEach(e => {
+          const cat = e.category || 'training';
+          (grouped[cat] = grouped[cat] || []).push(e);
+        });
+        grouped.paddle = grouped.paddle.slice(0, 6); // max 6 paddle days shown
+        setLive(grouped);
+      })
+      .catch(() => {})
+      .finally(() => setEvLoad(false));
+  }, []);
 
-  const totalRsvped = rsvps.size;
-  const list = sessions[tab];
-  const tabCounts = useMemo(() => Object.fromEntries(
-    Object.entries(sessions).map(([k,v]) => [k, v.length])
-  ), [sessions]);
+  const list       = liveEvents[tab] || [];
+  const nextPaddle = (liveEvents.paddle || [])[0] || null;
+  const tabCounts  = useMemo(() =>
+    Object.fromEntries(TABS.map(t => [t.id, (liveEvents[t.id] || []).length]))
+  , [liveEvents]);
 
   return (
     <>
       <AnnouncementBanner />
       <div className="ticker">
         <div className="row">
-          <span className="live"><i className="dot"></i>OPEN FOR THE SEASON · NEXT PADDLE IN 3 DAYS</span>
-          <span>SAT MAY 17 · MAXWELL PL · 9AM–4PM</span>
-          <span>{totalRsvped > 0 ? `YOU HAVE ${totalRsvped} RSVP${totalRsvped > 1 ? 'S' : ''}` : "FREE · NO EXP · ALL AGES 5+"}</span>
+          <span className="live"><i className="dot"></i>
+            {nextPaddle ? `NEXT PADDLE: ${fmtDate(nextPaddle.date).toUpperCase()}` : 'OPEN FOR THE SEASON · FREE PADDLING'}
+          </span>
+          <span>
+            {nextPaddle ? `${fmtDate(nextPaddle.date).toUpperCase()} · MAXWELL PL · ${fmtTime(nextPaddle.time).toUpperCase()}` : 'MAXWELL PLACE COVE · HOBOKEN NJ'}
+          </span>
+          <span>FREE · NO EXP · ALL AGES 5+</span>
         </div>
       </div>
 
@@ -828,19 +831,32 @@ function App() {
 
             <aside className="next-card">
               <div className="label">▸ NEXT FREE PADDLE DAY</div>
-              <div className="date">Sat, May 17</div>
-              <div className="when">
-                <div><span>Time</span><b>9am – 4pm</b></div>
-                <div style={{textAlign:"right"}}><span>Where</span><b>Maxwell Place Cove</b></div>
-              </div>
-              <div className="spots-bar"><span style={{width: heroRsvp ? "67%" : "70%"}} /></div>
-              <div className="spots-row">
-                <span>{heroRsvp ? "41 / 60 SPOTS" : "42 / 60 SPOTS"} OPEN</span>
-                <span>WAIVER REQ'D</span>
-              </div>
-              <button className={"rsvp" + (heroRsvp ? " confirmed" : "")} onClick={() => setHeroRsvp(!heroRsvp)}>
-                {heroRsvp ? "YOU'RE IN — SEE YOU SATURDAY" : "Hold my spot →"}
-              </button>
+              {evLoading ? (
+                <div style={{padding:'20px 0',color:'var(--ink-2)',fontFamily:'"JetBrains Mono",monospace',fontSize:'11px',letterSpacing:'.14em',textTransform:'uppercase'}}>Loading…</div>
+              ) : nextPaddle ? (
+                <>
+                  <div className="date">{fmtDate(nextPaddle.date)}</div>
+                  <div className="when">
+                    <div><span>Time</span><b>{fmtTime(nextPaddle.time) || 'See Meetup'}</b></div>
+                    <div style={{textAlign:"right"}}><span>Where</span><b>Maxwell Place Cove</b></div>
+                  </div>
+                  <div className="spots-row" style={{marginTop:'14px'}}>
+                    <span>FREE · WAIVER REQ'D</span>
+                    <span>ALL AGES 5+</span>
+                  </div>
+                  <a href={nextPaddle.url} target="_blank" rel="noopener noreferrer" className="rsvp">
+                    Register on Meetup →
+                  </a>
+                </>
+              ) : (
+                <>
+                  <div className="date">See Meetup</div>
+                  <div className="when"><div><span>Season</span><b>May – Oct</b></div></div>
+                  <a href="https://www.meetup.com/Hoboken-Cove-Community-Boathouse/" target="_blank" rel="noopener" className="rsvp">
+                    View Schedule →
+                  </a>
+                </>
+              )}
             </aside>
           </div>
         </section>
@@ -862,17 +878,35 @@ function App() {
           </div>
 
           <div className="rsvp-tabs">
-            {tabs.map(t => (
+            {TABS.map(t => (
               <button key={t.id} className={"rsvp-tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
-                {t.label}<span className="count">{tabCounts[t.id]}</span>
+                {t.label}
+                {!evLoading && tabCounts[t.id] > 0 && (
+                  <span className="count">{tabCounts[t.id]}</span>
+                )}
               </button>
             ))}
           </div>
 
           <div className="sessions">
-            {list.map(s => (
-              <Session key={s.id} s={s} rsvped={rsvps.has(s.id)} onRsvp={toggleRsvp} />
-            ))}
+            {evLoading && (
+              <div style={{gridColumn:'1/-1',textAlign:'center',padding:'56px 0',fontFamily:'"JetBrains Mono",monospace',fontSize:'11px',letterSpacing:'.2em',textTransform:'uppercase',color:'var(--ink-2)'}}>
+                <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'var(--orange)',display:'inline-block',marginBottom:'16px',animation:'pulse 1.8s infinite'}} />
+                <div>Loading events from Meetup…</div>
+              </div>
+            )}
+            {!evLoading && list.length === 0 && (
+              <div style={{gridColumn:'1/-1',background:'#fff',border:'1.5px solid var(--ink)',borderRadius:'8px',boxShadow:'6px 6px 0 var(--ink)',padding:'48px',textAlign:'center'}}>
+                <p style={{fontFamily:'"Bricolage Grotesque",sans-serif',fontWeight:700,fontSize:'24px',margin:'0 0 10px',letterSpacing:'-.015em'}}>
+                  No upcoming events in this category.
+                </p>
+                <a href="https://www.meetup.com/Hoboken-Cove-Community-Boathouse/" target="_blank" rel="noopener"
+                  style={{color:'var(--orange)',textDecoration:'underline',fontSize:'14px',fontWeight:500}}>
+                  Check the full Meetup schedule →
+                </a>
+              </div>
+            )}
+            {!evLoading && list.map(s => <Session key={s.id} s={s} />)}
           </div>
         </section>
 
