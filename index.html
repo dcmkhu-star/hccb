@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hoboken Cove Community Boathouse — Get in a boat.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --paper:#fbf6ec;
+    --paper-2:#f1e9d6;
+    --ink:#111111;
+    --ink-2:#4a4a4a;
+    --coral:#e63b5b;
+    --coral-deep:#b81e3d;
+    --teal:#41b5a1;
+    --teal-deep:#2a8c7c;
+    --orange:#f08a3f;
+    --orange-deep:#c4651b;
+    --cove:#41b5a1;          /* alias to teal so map etc. still works */
+    --cove-deep:#2a8c7c;
+    --algae:#41b5a1;
+    --rule:#e7dcc4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"DM Sans",system-ui,sans-serif;font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer;border:0;background:transparent;color:inherit}
+  .display{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;letter-spacing:-.025em;line-height:.94}
+  .mono{font-family:"JetBrains Mono",monospace}
+  .container{max-width:1340px;margin:0 auto;padding:0 32px}
+
+  /* TICKER */
+  .ticker{
+    background:var(--ink);color:var(--paper);
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    overflow:hidden;
+  }
+  .ticker .row{display:flex;justify-content:space-between;padding:10px 32px;max-width:1340px;margin:0 auto;align-items:center}
+  .ticker .live{display:inline-flex;align-items:center;gap:8px}
+  .ticker .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px rgba(255,106,44,.25);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(255,106,44,.25)}50%{box-shadow:0 0 0 6px rgba(255,106,44,.05)}}
+
+  /* NAV */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 32px;max-width:1340px;margin:0 auto;
+    border-bottom:1px solid var(--rule);
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand-mark{
+    width:46px;height:46px;display:block;
+    background:#fff;
+  }
+  .brand-mark img{width:100%;height:100%;display:block;object-fit:contain}
+  .brand h1{font-family:"Bricolage Grotesque";font-weight:700;font-size:22px;margin:0;letter-spacing:-.02em;line-height:1}
+  .brand .tagline{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-top:3px}
+  .nav ul{display:flex;gap:28px;list-style:none;padding:0;margin:0;font-size:14px;font-weight:500}
+  .nav-actions{display:flex;gap:10px;align-items:center}
+  .nav .cta{
+    background:var(--orange);color:#fff;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:600;
+    display:inline-flex;align-items:center;gap:10px;
+    box-shadow:0 4px 0 var(--orange-deep);
+    transition:.1s;
+  }
+  .nav .cta:active{transform:translateY(2px);box-shadow:0 2px 0 var(--orange-deep)}
+  .nav .cta::after{content:"→"}
+  .nav .donate-btn{
+    background:var(--coral);color:#fff;padding:13px 22px;border-radius:999px;font-size:14px;font-weight:600;
+    display:inline-flex;align-items:center;gap:10px;
+    box-shadow:0 4px 0 var(--coral-deep);
+    transition:.1s;
+  }
+  .nav .donate-btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--coral-deep)}
+  .nav .donate-btn::before{content:"♥"}
+
+  /* HERO */
+  .hero{padding:48px 0 64px;position:relative}
+  .hero .container{display:grid;grid-template-columns:1.25fr 1fr;gap:48px;align-items:end}
+  .hero h2{
+    font-family:"Bricolage Grotesque";font-weight:800;
+    font-size:clamp(72px,11vw,180px);line-height:.88;letter-spacing:-.035em;
+    margin:0 0 36px;
+  }
+  .hero h2 .blue{color:var(--teal)}
+  .hero h2 .orange{color:var(--orange)}
+  .hero h2 .coral{color:var(--coral)}
+  .hero h2 .stroke{
+    -webkit-text-stroke:2px var(--ink);color:transparent;
+    font-style:italic;
+  }
+  .hero h2 .wavy{
+    background:linear-gradient(180deg,transparent 65%,var(--orange) 65%,var(--orange) 78%,transparent 78%);
+    padding:0 4px;
+  }
+  .hero .lede{font-size:20px;max-width:48ch;color:var(--ink-2);line-height:1.45}
+  .hero-meta{
+    margin-top:36px;display:flex;gap:24px;flex-wrap:wrap;font-family:"JetBrains Mono",monospace;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+  }
+  .hero-meta span{display:inline-flex;align-items:center;gap:8px}
+  .hero-meta span::before{content:"";width:7px;height:7px;background:var(--algae);border-radius:50%}
+
+  /* NEXT CARD - sticker style */
+  .next-card{
+    background:#fff;border:1.5px solid var(--ink);border-radius:6px;
+    padding:28px;position:relative;
+    box-shadow:8px 8px 0 var(--ink);
+    transform:rotate(-1.2deg);
+  }
+  .next-card::before{
+    content:"";position:absolute;top:-14px;left:30px;width:80px;height:24px;
+    background:repeating-linear-gradient(90deg,#fff6,#fff6 6px,transparent 6px,transparent 10px),#ffe8a3;
+    transform:rotate(-3deg);border:1px solid rgba(0,0,0,.1);
+  }
+  .next-card .label{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);font-weight:700}
+  .next-card .date{font-family:"Bricolage Grotesque";font-weight:800;font-size:48px;line-height:.9;letter-spacing:-.02em;margin:14px 0 8px}
+  .next-card .when{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px dashed var(--rule);padding-top:14px;margin-top:14px;font-size:14px}
+  .next-card .when b{font-family:"Bricolage Grotesque";font-weight:700;font-size:22px;display:block;letter-spacing:-.01em}
+  .spots-bar{height:8px;background:var(--paper-2);border-radius:99px;overflow:hidden;margin:16px 0 8px}
+  .spots-bar > span{display:block;height:100%;background:var(--algae);transition:.4s}
+  .spots-row{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+  .next-card .rsvp{
+    margin-top:18px;width:100%;background:var(--orange);color:#fff;
+    padding:16px;border-radius:99px;font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 4px 0 var(--orange-deep);transition:.1s;
+  }
+  .next-card .rsvp:active{transform:translateY(2px);box-shadow:0 2px 0 var(--orange-deep)}
+  .next-card .rsvp.confirmed{background:var(--algae);box-shadow:0 4px 0 #3e6125}
+  .next-card .rsvp.confirmed::before{content:"✓ "}
+
+  /* WAVE DIVIDER */
+  .wave{display:block;width:100%;height:60px;color:var(--ink)}
+
+  /* VALUE STRIP */
+  .strip{background:var(--ink);color:var(--paper);padding:24px 0;overflow:hidden}
+  .strip-track{display:flex;gap:48px;font-family:"Bricolage Grotesque";font-weight:700;font-size:42px;letter-spacing:-.02em;white-space:nowrap;animation:slide 30s linear infinite;align-items:center}
+  .strip-track span{display:inline-flex;align-items:center;gap:48px}
+  .strip-track span .dot{display:inline-block;width:12px;height:12px;background:var(--orange);border-radius:50%;margin-left:48px}
+  .strip-track .italic{font-style:italic;color:var(--orange)}
+  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* SECTION */
+  .section{padding:120px 0;position:relative}
+  .section + .section{padding-top:0}
+  .sh{margin-bottom:48px;display:grid;grid-template-columns:1.5fr 1fr;gap:48px;align-items:end}
+  .sh .eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);font-weight:700;display:inline-flex;align-items:center;gap:12px}
+  .sh .eyebrow::before{content:"";width:32px;height:1.5px;background:var(--orange)}
+  .sh h3{font-family:"Bricolage Grotesque";font-weight:700;font-size:clamp(48px,7vw,108px);line-height:.92;letter-spacing:-.03em;margin:16px 0 0}
+  .sh h3 em{font-style:italic;color:var(--coral)}
+  .sh h3 .uline{background:linear-gradient(180deg,transparent 76%,var(--orange) 76%,var(--orange) 86%,transparent 86%);padding:0 4px}
+  .sh .aside{color:var(--ink-2);font-size:16px;max-width:42ch;padding-bottom:8px}
+
+  /* RSVP — TABS + LIST */
+  .rsvp-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:32px;border-bottom:1.5px solid var(--rule);padding-bottom:0}
+  .rsvp-tab{
+    padding:14px 20px;font-weight:600;font-size:14px;border-radius:0;
+    border-bottom:3px solid transparent;margin-bottom:-1.5px;
+    display:inline-flex;align-items:center;gap:10px;color:var(--ink-2);
+  }
+  .rsvp-tab.on{color:var(--ink);border-color:var(--orange)}
+  .rsvp-tab .count{font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--paper-2);padding:3px 7px;border-radius:99px;color:var(--ink-2);letter-spacing:.05em}
+  .rsvp-tab.on .count{background:var(--orange);color:#fff}
+
+  .sessions{display:grid;grid-template-columns:1fr;gap:16px}
+  .session{
+    display:grid;grid-template-columns:120px 1.4fr 1fr 1.3fr 200px;gap:24px;align-items:center;
+    background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:22px 24px;
+    box-shadow:4px 4px 0 var(--ink);
+    transition:.1s;position:relative;
+  }
+  .session:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+  .session.full{opacity:.7;background:var(--paper-2);box-shadow:none}
+  .session .date-block{display:flex;flex-direction:column;align-items:flex-start;line-height:1}
+  .session .month{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--orange);font-weight:700}
+  .session .day{font-family:"Bricolage Grotesque";font-weight:800;font-size:54px;letter-spacing:-.03em;line-height:.9;margin:4px 0}
+  .session .dow{font-size:13px;color:var(--ink-2);font-weight:500}
+  .session .title{font-family:"Bricolage Grotesque";font-weight:700;font-size:22px;letter-spacing:-.015em;line-height:1.1;margin:0 0 4px}
+  .session .where{font-size:13px;color:var(--ink-2)}
+  .session .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .session .tag{font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--rule);border-radius:99px;color:var(--ink-2);font-weight:500;font-family:"JetBrains Mono",monospace}
+  .session .tag.hot{background:var(--orange);color:#fff;border-color:var(--orange)}
+  .session .time{font-family:"Bricolage Grotesque";font-weight:600;font-size:20px;letter-spacing:-.005em}
+  .session .time small{display:block;color:var(--ink-2);font-size:12px;font-weight:400;letter-spacing:.04em;font-family:"DM Sans"}
+  .session .spots{font-size:13px;color:var(--ink-2)}
+  .session .spots b{display:block;color:var(--ink);font-family:"Bricolage Grotesque";font-weight:700;font-size:18px;letter-spacing:-.01em;margin-top:2px}
+  .session .rsvp-btn{
+    background:var(--ink);color:#fff;padding:14px 20px;border-radius:99px;font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    transition:.15s;
+  }
+  .session .rsvp-btn:hover:not(:disabled){background:var(--orange)}
+  .session .rsvp-btn.in{background:var(--algae)}
+  .session .rsvp-btn:disabled{background:var(--rule);color:var(--ink-2);cursor:not-allowed}
+
+  .add-cal{
+    margin-top:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);
+    text-align:center;text-decoration:underline;font-family:"JetBrains Mono",monospace;
+  }
+
+  /* HOW IT WORKS */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;position:relative}
+  .step{position:relative;padding:0 0 0 0}
+  .step .n{
+    font-family:"Bricolage Grotesque";font-weight:800;font-size:140px;line-height:1;letter-spacing:-.04em;color:var(--orange);
+    margin-bottom:-30px;
+  }
+  .step h4{font-family:"Bricolage Grotesque";font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1.05;margin:0 0 12px}
+  .step p{margin:0;color:var(--ink-2);font-size:15px}
+  .step.arrow::after{
+    content:"→";position:absolute;top:60px;right:-22px;color:var(--orange);font-size:32px;font-weight:700;
+  }
+  .step:last-child .arrow::after{display:none}
+
+  /* PROGRAMS */
+  .programs{display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:auto auto;gap:18px}
+  .program{
+    background:#fff;border:1.5px solid var(--ink);border-radius:8px;
+    box-shadow:6px 6px 0 var(--ink);overflow:hidden;
+    display:flex;flex-direction:column;
+    transition:.15s;cursor:pointer;
+  }
+  .program:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+  .program .photo{
+    aspect-ratio:5/3;background:var(--cove);
+    position:relative;overflow:hidden;
+    border-bottom:1.5px solid var(--ink);
+    color:#fff;display:flex;align-items:end;padding:20px;
+  }
+  .program .photo .ph{
+    position:absolute;inset:0;display:grid;place-items:center;
+    font-family:"Bricolage Grotesque";font-style:italic;font-weight:500;font-size:14px;
+    color:rgba(255,255,255,.55);text-align:center;line-height:1.2;
+    background:
+      repeating-linear-gradient(135deg,transparent 0 8px,rgba(255,255,255,.04) 8px 9px);
+  }
+  .program .photo .stamp{
+    background:var(--orange);color:#fff;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    padding:5px 10px;border-radius:99px;position:relative;z-index:1;font-weight:700;
+  }
+  .program .body{padding:24px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .program h4{font-family:"Bricolage Grotesque";font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1;margin:0}
+  .program p{margin:0;color:var(--ink-2);font-size:14px;flex:1}
+  .program .more{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+  .program .more::after{content:"→"}
+
+  .program.big{grid-row:1/span 2}
+  .program.big .photo{aspect-ratio:auto;flex:1;min-height:280px}
+  .program.big h4{font-size:44px}
+  .program.feat .photo{background:var(--orange)}
+  .program.feat .stamp{background:var(--ink)}
+  .program.algae .photo{background:var(--algae)}
+  .program.algae .stamp{background:var(--ink)}
+  .program.deep .photo{background:var(--cove-deep)}
+
+  /* VOLUNTEER BAND */
+  .vol{
+    background:var(--teal);color:#fff;padding:96px 0;position:relative;overflow:hidden;
+  }
+  .vol::before{
+    content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(135deg,transparent 0 16px,rgba(255,255,255,.03) 16px 17px);
+  }
+  .vol .container{display:grid;grid-template-columns:1.3fr 1fr;gap:64px;align-items:center;position:relative}
+  .vol h3{font-family:"Bricolage Grotesque";font-weight:800;font-size:clamp(48px,7vw,108px);line-height:.92;letter-spacing:-.03em;margin:0 0 24px}
+  .vol h3 em{font-style:italic;color:var(--orange)}
+  .vol p{font-size:18px;max-width:50ch;opacity:.95;margin:0 0 28px}
+  .vol .btn{
+    display:inline-flex;align-items:center;gap:12px;background:var(--orange);color:#fff;padding:18px 28px;border-radius:99px;font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;
+    box-shadow:0 6px 0 var(--orange-deep);
+  }
+  .vol .btn::after{content:"→"}
+  .vol-card{
+    background:var(--paper);color:var(--ink);
+    border:1.5px solid var(--ink);border-radius:8px;padding:32px;
+    box-shadow:10px 10px 0 var(--ink);transform:rotate(1.5deg);
+  }
+  .vol-card h4{font-family:"Bricolage Grotesque";font-weight:700;font-size:28px;margin:0 0 16px;letter-spacing:-.02em}
+  .vol-card ul{list-style:none;padding:0;margin:0;font-size:15px}
+  .vol-card li{padding:12px 0;border-top:1.5px dashed var(--rule);display:flex;align-items:start;gap:12px}
+  .vol-card li:first-child{border-top:0}
+  .vol-card li .check{
+    width:24px;height:24px;border-radius:50%;background:var(--algae);color:#fff;display:grid;place-items:center;font-size:13px;flex-shrink:0;font-weight:700;
+  }
+
+  /* FEED */
+  .feed{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .feed .post{
+    aspect-ratio:1/1;background:var(--teal);position:relative;overflow:hidden;border-radius:4px;
+    display:grid;place-items:center;color:#fff;
+  }
+  .feed .post .ph-tag{font-family:"Bricolage Grotesque";font-style:italic;font-size:13px;opacity:.7;font-weight:500;text-align:center;line-height:1.2;padding:8px}
+  .feed .post.a{background:var(--orange)}
+  .feed .post.b{background:var(--teal)}
+  .feed .post.c{background:var(--coral)}
+  .feed .post.d{background:var(--ink)}
+  .feed .post.e{background:var(--teal-deep)}
+  .feed .post::after{
+    content:"";position:absolute;inset:0;
+    background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(255,255,255,.04) 6px 7px);
+  }
+  .feed-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}
+  .feed-head h3{font-family:"Bricolage Grotesque";font-weight:700;font-size:48px;letter-spacing:-.02em;margin:0;line-height:1}
+  .feed-head .handle{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink-2);letter-spacing:.05em}
+
+  /* FAQ */
+  .faq{display:grid;grid-template-columns:1fr;gap:0;border-top:1.5px solid var(--ink)}
+  .faq-item{border-bottom:1.5px solid var(--ink);padding:24px 0;cursor:pointer}
+  .faq-item summary{
+    list-style:none;display:flex;justify-content:space-between;align-items:center;gap:24px;
+    font-family:"Bricolage Grotesque";font-weight:700;font-size:26px;letter-spacing:-.015em;line-height:1.15;
+  }
+  .faq-item summary::-webkit-details-marker{display:none}
+  .faq-item summary::after{content:"+";font-size:36px;color:var(--orange);font-weight:400;transition:.2s;line-height:0}
+  .faq-item[open] summary::after{transform:rotate(45deg)}
+  .faq-item .ans{margin-top:16px;color:var(--ink-2);font-size:16px;max-width:72ch;line-height:1.6}
+
+  /* DONATE */
+  .donate{
+    background:var(--coral);color:#fff;padding:96px 0;position:relative;overflow:hidden;
+  }
+  .donate::before{
+    content:"";position:absolute;inset:-50% -10% auto auto;width:60vw;height:60vw;
+    background:rgba(255,255,255,.08);border-radius:50%;
+  }
+  .donate .container{display:grid;grid-template-columns:1.4fr 1fr;gap:48px;align-items:center;position:relative}
+  .donate h3{font-family:"Bricolage Grotesque";font-weight:800;font-size:clamp(56px,8vw,128px);line-height:.9;letter-spacing:-.035em;margin:0}
+  .donate h3 em{font-style:italic}
+  .donate-amts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+  .donate-amts button{
+    background:#fff;color:var(--ink);padding:18px;border-radius:8px;font-family:"Bricolage Grotesque";font-weight:700;font-size:28px;letter-spacing:-.01em;
+    border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);transition:.1s;
+  }
+  .donate-amts button.on{background:var(--ink);color:#fff}
+  .donate-amts button:active{transform:translateY(2px);box-shadow:2px 2px 0 var(--ink)}
+  .donate .btn{
+    width:100%;display:flex;justify-content:center;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:18px;border-radius:99px;font-weight:700;font-size:15px;letter-spacing:.04em;text-transform:uppercase;
+  }
+  .donate .btn::after{content:"→"}
+  .donate-card{background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:8px;padding:28px;box-shadow:8px 8px 0 var(--ink);transform:rotate(-1deg)}
+  .donate-card .meta{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin-top:14px;text-align:center}
+
+  /* FOOTER */
+  footer{background:var(--ink);color:var(--paper);padding:80px 0 24px}
+  footer .grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:48px}
+  footer h5{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(244,236,217,.6);margin:0 0 18px;font-weight:500}
+  footer ul{list-style:none;padding:0;margin:0}
+  footer li{padding:5px 0;font-size:14px}
+  footer .big{font-family:"Bricolage Grotesque";font-weight:800;font-size:72px;letter-spacing:-.03em;margin:0 0 16px;line-height:.9}
+  footer .big em{font-style:italic;color:var(--orange)}
+  footer .fine{margin-top:64px;padding-top:24px;border-top:1px solid rgba(244,236,217,.12);display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;color:rgba(244,236,217,.5);text-transform:uppercase}
+  .socials{display:flex;gap:8px;margin-top:14px}
+  .socials a{
+    width:38px;height:38px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(244,236,217,.3);
+    font-size:12px;font-family:"JetBrains Mono",monospace;
+  }
+  .socials a:hover{background:var(--orange);border-color:var(--orange)}
+
+  /* MAP */
+  .map-section{padding:96px 0;border-top:1.5px solid var(--rule)}
+  .map-wrap{
+    background:var(--cove);border:1.5px solid var(--ink);border-radius:8px;
+    box-shadow:8px 8px 0 var(--ink);
+    min-height:440px;position:relative;overflow:hidden;color:#fff;padding:32px;
+  }
+  .map-wrap svg{position:absolute;inset:0;width:100%;height:100%}
+  .map-wrap .label{position:absolute;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:var(--ink);padding:5px 10px;border-radius:4px}
+  .map-wrap .pin{position:absolute;width:48px;height:48px;display:grid;place-items:center;font-family:"Bricolage Grotesque";font-weight:800;color:#fff;font-size:18px;background:var(--orange);border-radius:50%;border:3px solid var(--paper);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+  .map-info{padding:24px 0;display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+
+  /* MODAL */
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(17,17,17,.55);backdrop-filter:blur(4px);
+    display:grid;place-items:center;z-index:100;padding:24px;
+    animation:fade .15s ease-out;
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{
+    background:var(--paper);border:1.5px solid var(--ink);border-radius:10px;
+    box-shadow:10px 10px 0 var(--ink);
+    max-width:520px;width:100%;padding:32px;position:relative;
+    animation:pop .18s ease-out;
+  }
+  @keyframes pop{from{transform:translateY(8px) scale(.98);opacity:.4}to{transform:none;opacity:1}}
+  .modal .close{position:absolute;top:14px;right:18px;font-size:28px;color:var(--ink-2);font-weight:400;line-height:1;background:transparent;border:0;cursor:pointer}
+  .modal .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--coral);font-weight:700;display:inline-flex;align-items:center;gap:10px}
+  .modal .eyebrow::before{content:"";width:24px;height:1.5px;background:var(--coral)}
+  .modal h3{font-family:"Bricolage Grotesque";font-weight:800;font-size:44px;letter-spacing:-.025em;line-height:.95;margin:14px 0 6px}
+  .modal h3 em{font-style:italic;color:var(--coral)}
+  .modal p{margin:0 0 22px;color:var(--ink-2);font-size:15px;max-width:42ch}
+  .modal .opts{display:grid;gap:10px}
+  .modal .opt{
+    display:grid;grid-template-columns:46px 1fr auto;gap:14px;align-items:center;
+    background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:14px 18px;
+    box-shadow:4px 4px 0 var(--ink);transition:.12s;cursor:pointer;text-align:left;width:100%;
+    color:var(--ink);text-decoration:none;
+  }
+  .modal .opt:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+  .modal .opt:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink)}
+  .modal .opt .ic{
+    width:46px;height:46px;border-radius:8px;display:grid;place-items:center;
+    font-family:"Bricolage Grotesque";font-weight:800;color:#fff;font-size:22px;
+  }
+  .modal .opt .ic.gb{background:var(--coral)}
+  .modal .opt .ic.bg{background:var(--teal)}
+  .modal .opt .ic.vm{background:#3D95CE}
+  .modal .opt b{display:block;font-family:"Bricolage Grotesque";font-weight:700;font-size:20px;letter-spacing:-.01em}
+  .modal .opt small{display:block;color:var(--ink-2);font-size:13px;margin-top:2px}
+  .modal .opt .arrow{font-size:22px;color:var(--ink-2)}
+  .modal .meta{margin-top:18px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+
+  @media (max-width:1000px){
+    .hero .container,.sh,.vol .container,.donate .container,.feed,footer .grid{grid-template-columns:1fr}
+    .session{grid-template-columns:1fr;row-gap:12px}
+    .steps,.programs{grid-template-columns:1fr 1fr}
+    .program.big{grid-row:auto}
+    .feed{grid-template-columns:repeat(3,1fr)}
+    .step.arrow::after{display:none}
+    .nav ul{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ─── data ─────────────────────────────────────
+const initialSessions = {
+  paddle: [
+    { id: "p1", month:"MAY", day:17, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:42, total:60, tag:"hot" },
+    { id: "p2", month:"MAY", day:18, dow:"Sunday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:28, total:60 },
+    { id: "p3", month:"MAY", day:24, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:60, total:60 },
+    { id: "p4", month:"MAY", day:25, dow:"Sunday", title:"Stand-Up Paddle Day", where:"Maxwell Place Cove · SUP focus", time:"10am–2pm", window:"All levels", spots:14, total:30 },
+    { id: "p5", month:"MAY", day:31, dow:"Saturday", title:"Free Paddle Day", where:"Maxwell Place Cove · Kayak + SUP + Outrigger", time:"9am–4pm", window:"Drop-in", spots:0, total:60 },
+  ],
+  volunteer: [
+    { id: "v1", month:"MAY", day:15, dow:"Thursday", title:"Volunteer Orientation", where:"Boathouse · For new volunteers", time:"6:30pm–8pm", window:"On land", spots:6, total:15, tag:"new" },
+    { id: "v2", month:"MAY", day:17, dow:"Saturday", title:"Saturday Crew · Beach + Boats", where:"Maxwell Place · Help run paddle day", time:"8am–4:30pm", window:"Full day", spots:9, total:18 },
+    { id: "v3", month:"MAY", day:18, dow:"Sunday", title:"Sunday Crew · Beach + Boats", where:"Maxwell Place · Help run paddle day", time:"8am–4:30pm", window:"Full day", spots:11, total:18 },
+    { id: "v4", month:"MAY", day:21, dow:"Wednesday", title:"Boat Maintenance Night", where:"Boathouse · Bring sneakers", time:"6pm–9pm", window:"Open shift", spots:8, total:12 },
+  ],
+  trips: [
+    { id: "t1", month:"MAY", day:24, dow:"Saturday", title:"Liberty Island Loop", where:"Volunteers only · Sea kayak · 10mi", time:"7am–12pm", window:"Intermediate+", spots:5, total:10, tag:"trip" },
+    { id: "t2", month:"JUN", day:7, dow:"Saturday", title:"Manhattan Circumnavigation", where:"Volunteers only · 30mi · Full day", time:"5:30am–7pm", window:"Advanced", spots:2, total:8, tag:"trip" },
+    { id: "t3", month:"JUN", day:14, dow:"Saturday", title:"Brooklyn Bridge → Red Hook", where:"Volunteers only · 8mi", time:"8am–1pm", window:"Intermediate", spots:7, total:10 },
+  ],
+  patrol: [
+    { id: "pp1", month:"MAY", day:18, dow:"Sunday", title:"Planet Patrol · Litter Pick", where:"Cove + Pier · Bring a hat", time:"10am–12pm", window:"All ages", spots:18, total:30 },
+    { id: "pp2", month:"JUN", day:1, dow:"Sunday", title:"Planet Patrol · Litter Pick", where:"Cove + Pier · Bring a hat", time:"10am–12pm", window:"All ages", spots:24, total:30 },
+  ],
+};
+
+const tabs = [
+  { id: "paddle", label: "Free Paddle Days" },
+  { id: "volunteer", label: "Volunteer Shifts" },
+  { id: "trips", label: "River Trips" },
+  { id: "patrol", label: "Planet Patrol" },
+];
+
+// ─── components ───────────────────────────────
+function Session({ s, rsvped, onRsvp }) {
+  const isFull = s.spots <= 0 && !rsvped;
+  const remaining = rsvped ? s.spots - 1 : s.spots;
+  return (
+    <article className={"session" + (isFull ? " full" : "")}>
+      <div className="date-block">
+        <span className="month">{s.month}</span>
+        <span className="day">{s.day}</span>
+        <span className="dow">{s.dow}</span>
+      </div>
+      <div>
+        <h4 className="title">{s.title}</h4>
+        <div className="where">{s.where}</div>
+        <div className="tags">
+          {s.tag === "hot" && <span className="tag hot">Almost full</span>}
+          {s.tag === "new" && <span className="tag hot">New volunteers</span>}
+          {s.tag === "trip" && <span className="tag hot">River trip</span>}
+          {s.spots === 0 && !rsvped && <span className="tag" style={{background:"var(--ink)",color:"#fff",borderColor:"var(--ink)"}}>Waitlist</span>}
+          <span className="tag">{s.window}</span>
+          <span className="tag">Waiver req'd</span>
+        </div>
+      </div>
+      <div className="time">
+        {s.time}<small>EDT · Maxwell Pl</small>
+      </div>
+      <div className="spots">
+        <span>Spots remaining</span>
+        <b>{rsvped ? `${remaining} / ${s.total} (you're #${s.total - remaining})` : `${s.spots} / ${s.total}`}</b>
+        <div className="spots-bar" style={{marginBottom:4}}>
+          <span style={{width: `${Math.max(0, (rsvped ? remaining : s.spots) / s.total * 100)}%`, background: (rsvped ? remaining : s.spots) <= 5 ? "var(--orange)" : "var(--algae)"}} />
+        </div>
+      </div>
+      <div>
+        <button
+          className={"rsvp-btn" + (rsvped ? " in" : "")}
+          disabled={isFull}
+          onClick={() => onRsvp(s.id)}>
+          {rsvped ? "✓ You're in" : isFull ? "Waitlist" : "RSVP"}
+        </button>
+        <div className="add-cal">{rsvped ? "Add to calendar ↓" : "Free · 1-click"}</div>
+      </div>
+    </article>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState("paddle");
+  const [sessions] = useState(initialSessions);
+  const [rsvps, setRsvps] = useState(new Set());
+  const [amt, setAmt] = useState(50);
+  const [heroRsvp, setHeroRsvp] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
+
+  const toggleRsvp = (id) => {
+    setRsvps(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const totalRsvped = rsvps.size;
+  const list = sessions[tab];
+  const tabCounts = useMemo(() => Object.fromEntries(
+    Object.entries(sessions).map(([k,v]) => [k, v.length])
+  ), [sessions]);
+
+  return (
+    <>
+      <div className="ticker">
+        <div className="row">
+          <span className="live"><i className="dot"></i>OPEN FOR THE SEASON · NEXT PADDLE IN 3 DAYS</span>
+          <span>SAT MAY 17 · MAXWELL PL · 9AM–4PM</span>
+          <span>{totalRsvped > 0 ? `YOU HAVE ${totalRsvped} RSVP${totalRsvped > 1 ? 'S' : ''}` : "FREE · NO EXP · ALL AGES 5+"}</span>
+        </div>
+      </div>
+
+      <nav className="nav">
+        <a className="brand" href="#">
+          <span className="brand-mark"><img src="assets/hccb-logo.png" alt="HCCB" /></span>
+          <div>
+            <h1>Hoboken Cove Boathouse</h1>
+            <div className="tagline">Free paddling on the Hudson · est. 2003</div>
+          </div>
+        </a>
+        <ul>
+          <li><a href="#rsvp">Schedule</a></li>
+          <li><a href="#programs">Programs</a></li>
+          <li><a href="#volunteer">Volunteer</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#visit">Visit</a></li>
+        </ul>
+        <div className="nav-actions">
+          <button className="donate-btn" onClick={() => setDonateOpen(true)}>Donate</button>
+          <a className="cta" href="#rsvp">RSVP free</a>
+        </div>
+      </nav>
+
+      <main>
+        <section className="hero">
+          <div className="container">
+            <div>
+              <h2 className="display">
+                Get in <span className="blue">a boat.</span><br />
+                <span className="stroke">We've got</span><br />
+                <span className="wavy">the rest.</span>
+              </h2>
+              <p className="lede">A 100% volunteer-run boathouse on the Hudson, giving away free kayak, SUP, and outrigger time to anyone who shows up. New Jersey's largest free paddling program, run out of a shipping container at Maxwell Place Park.</p>
+              <div className="hero-meta">
+                <span>Free, always</span>
+                <span>No experience</span>
+                <span>Ages 5+</span>
+                <span>5 min from PATH</span>
+              </div>
+            </div>
+
+            <aside className="next-card">
+              <div className="label">▸ NEXT FREE PADDLE DAY</div>
+              <div className="date">Sat, May 17</div>
+              <div className="when">
+                <div><span>Time</span><b>9am – 4pm</b></div>
+                <div style={{textAlign:"right"}}><span>Where</span><b>Maxwell Place Cove</b></div>
+              </div>
+              <div className="spots-bar"><span style={{width: heroRsvp ? "67%" : "70%"}} /></div>
+              <div className="spots-row">
+                <span>{heroRsvp ? "41 / 60 SPOTS" : "42 / 60 SPOTS"} OPEN</span>
+                <span>WAIVER REQ'D</span>
+              </div>
+              <button className={"rsvp" + (heroRsvp ? " confirmed" : "")} onClick={() => setHeroRsvp(!heroRsvp)}>
+                {heroRsvp ? "YOU'RE IN — SEE YOU SATURDAY" : "Hold my spot →"}
+              </button>
+            </aside>
+          </div>
+        </section>
+
+        <div className="strip">
+          <div className="strip-track">
+            <span>Free forever <i className="dot"></i> Kayaks <span className="italic">&amp;</span> SUPs <i className="dot"></i> Hudson river views <i className="dot"></i> No experience needed <i className="dot"></i> All ages 5+ <i className="dot"></i></span>
+            <span>Free forever <i className="dot"></i> Kayaks <span className="italic">&amp;</span> SUPs <i className="dot"></i> Hudson river views <i className="dot"></i> No experience needed <i className="dot"></i> All ages 5+ <i className="dot"></i></span>
+          </div>
+        </div>
+
+        <section className="container section" id="rsvp">
+          <div className="sh">
+            <div>
+              <span className="eyebrow">RSVP · live spots</span>
+              <h3 className="display">Pick a date.<br />Bring a friend.<br /><em>Get on the water.</em></h3>
+            </div>
+            <p className="aside">RSVPs are free and 1-click. We cap each session so you get more than 5 minutes on the water. If a session is full, hop on the waitlist — we usually clear it.</p>
+          </div>
+
+          <div className="rsvp-tabs">
+            {tabs.map(t => (
+              <button key={t.id} className={"rsvp-tab" + (tab === t.id ? " on" : "")} onClick={() => setTab(t.id)}>
+                {t.label}<span className="count">{tabCounts[t.id]}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="sessions">
+            {list.map(s => (
+              <Session key={s.id} s={s} rsvped={rsvps.has(s.id)} onRsvp={toggleRsvp} />
+            ))}
+          </div>
+        </section>
+
+        <section className="container section" id="how">
+          <div className="sh">
+            <div>
+              <span className="eyebrow">How it works</span>
+              <h3 className="display"><span className="uline">Four steps.</span> One of them is "show up."</h3>
+            </div>
+            <p className="aside">No app to download, no membership, no fee. We've been doing this every weekend since 2003.</p>
+          </div>
+          <div className="steps">
+            <div className="step arrow">
+              <div className="n">01</div>
+              <h4>Pick a session</h4>
+              <p>RSVP up top. Free paddle, volunteer shift, river trip, or litter pickup.</p>
+            </div>
+            <div className="step arrow">
+              <div className="n">02</div>
+              <h4>Sign a waiver</h4>
+              <p>Online, once a season. We'll email it after you RSVP. Takes 90 seconds.</p>
+            </div>
+            <div className="step arrow">
+              <div className="n">03</div>
+              <h4>Wear what gets wet</h4>
+              <p>You will get wet. Bring a towel, sunscreen, and a water bottle. That's it.</p>
+            </div>
+            <div className="step">
+              <div className="n">04</div>
+              <h4>Paddle, splash, repeat</h4>
+              <p>Volunteers hand you a PFD, a paddle, and a boat. Then it's all you.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="container section" id="programs">
+          <div className="sh">
+            <div>
+              <span className="eyebrow">Programs · 5 ways in</span>
+              <h3 className="display">More than<br />a paddle day.</h3>
+            </div>
+            <p className="aside">Most folks start at a Free Paddle Day. From there, you can volunteer, train, race, or pick up trash from a kayak.</p>
+          </div>
+          <div className="programs">
+            <article className="program big feat">
+              <div className="photo">
+                <span className="ph">— hero photo: paddlers in the cove, golden hour —</span>
+                <span className="stamp">▸ The main thing</span>
+              </div>
+              <div className="body">
+                <h4>Free Paddle Days</h4>
+                <p>Saturdays &amp; Sundays from May through October, 9am to 4pm. Walk up, sign in, get a boat. Kayaks, paddleboards, and an outrigger canoe — all of it free, all of it staffed by trained volunteers.</p>
+                <a className="more" href="#rsvp">RSVP for a Saturday</a>
+              </div>
+            </article>
+            <article className="program">
+              <div className="photo" style={{background:"var(--cove-deep)"}}>
+                <span className="ph">— photo: outrigger crew —</span>
+                <span className="stamp">Ke Aloha</span>
+              </div>
+              <div className="body">
+                <h4>Outrigger Canoe</h4>
+                <p>Six-person Hawaiian outrigger, available during Free Paddle Days. Race-program info on Ke Aloha's site.</p>
+              </div>
+            </article>
+            <article className="program algae">
+              <div className="photo">
+                <span className="ph">— photo: bag of cove trash —</span>
+                <span className="stamp">Planet Patrol</span>
+              </div>
+              <div className="body">
+                <h4>Litter Pickups</h4>
+                <p>Once-monthly cove cleanups by kayak with Planet Patrol. Free, no experience needed.</p>
+              </div>
+            </article>
+            <article className="program">
+              <div className="photo" style={{background:"var(--orange-deep)"}}>
+                <span className="ph">— photo: river trip Manhattan skyline —</span>
+                <span className="stamp">Volunteers only</span>
+              </div>
+              <div className="body">
+                <h4>River Trips</h4>
+                <p>Sea-kayak trips to Manhattan, Brooklyn, Liberty Island. Open to trained volunteers.</p>
+              </div>
+            </article>
+            <article className="program">
+              <div className="photo" style={{background:"#1a4470"}}>
+                <span className="ph">— photo: golden pineapple trophy —</span>
+                <span className="stamp">Jun 21–22</span>
+              </div>
+              <div className="body">
+                <h4>Hudson River Cup</h4>
+                <p>Two-day race weekend. Outrigger, kayak, SUP, racers from around the world. Spectators welcome &amp; encouraged.</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="vol" id="volunteer">
+          <div className="container">
+            <div>
+              <span className="eyebrow" style={{color:"var(--orange)",fontFamily:"JetBrains Mono",fontSize:"12px",letterSpacing:".2em",textTransform:"uppercase",fontWeight:700,display:"inline-flex",alignItems:"center",gap:"12px"}}>▸ Volunteer with us</span>
+              <h3>Become a<br /><em>boathouse</em><br />volunteer.</h3>
+              <p>We run on people, not money. Volunteers do everything — running paddle days, leading river trips, fixing boats, teaching newbies how to brace. New volunteer orientation runs every other Thursday.</p>
+              <a className="btn" href="#rsvp">See volunteer shifts</a>
+            </div>
+            <aside className="vol-card">
+              <h4>You don't need to:</h4>
+              <ul>
+                <li><span className="check">✓</span><div><b>Be a great paddler.</b><br />We'll train you. Some of our best volunteers had never been in a boat.</div></li>
+                <li><span className="check">✓</span><div><b>Commit forever.</b><br />Show up to one shift a month. Or one shift, ever. We're glad you're here.</div></li>
+                <li><span className="check">✓</span><div><b>Know how to swim.</b><br />Helpful, not required. PFDs are mandatory, on everyone.</div></li>
+                <li><span className="check">✓</span><div><b>Pay anything.</b><br />Volunteers get free river-trip access. That's our thank-you.</div></li>
+              </ul>
+            </aside>
+          </div>
+        </section>
+
+        <section className="container section">
+          <div className="feed-head">
+            <h3 className="display">From <em style={{color:"var(--orange)"}}>the cove</em>.</h3>
+            <span className="handle">@hobocobo · IG · TikTok</span>
+          </div>
+          <div className="feed">
+            <div className="post a"><span className="ph-tag">— paddle day,<br />Saturday —</span></div>
+            <div className="post b"><span className="ph-tag">— outrigger<br />sunset —</span></div>
+            <div className="post c"><span className="ph-tag">— planet patrol<br />haul —</span></div>
+            <div className="post d"><span className="ph-tag">— manhattan<br />trip —</span></div>
+            <div className="post e"><span className="ph-tag">— kids' first<br />kayak —</span></div>
+            <div className="post a"><span className="ph-tag">— hudson<br />river cup —</span></div>
+          </div>
+        </section>
+
+        <section className="container section" id="faq">
+          <div className="sh">
+            <div>
+              <span className="eyebrow">FAQ · The honest answers</span>
+              <h3 className="display">Stuff people ask<br />at the dock.</h3>
+            </div>
+            <p className="aside">Couldn't find your question? Email us — info@hobokencoveboathouse.org. Real humans, usually back within a day.</p>
+          </div>
+
+          <div className="faq">
+            <details className="faq-item" open>
+              <summary>Is it actually free?</summary>
+              <div className="ans">Yes. Free Paddle Days are completely free — no booking fee, no membership. We're a 501(c)(3) and donations cover boats, paddles, and PFDs. If you can chip in, we'd love that. If not, we want you on the water anyway.</div>
+            </details>
+            <details className="faq-item">
+              <summary>Do I need to know how to swim?</summary>
+              <div className="ans">Not required, but you'll be wearing a Coast-Guard-approved PFD the entire time. We stay in a protected cove for paddle days — not the open river. Volunteers are on the water with you.</div>
+            </details>
+            <details className="faq-item">
+              <summary>How old do kids have to be?</summary>
+              <div className="ans">5 and up for tandem kayaks (with an adult). 14 and up to paddle solo, with a parent's waiver signature.</div>
+            </details>
+            <details className="faq-item">
+              <summary>What should I wear?</summary>
+              <div className="ans">Clothes that can get wet. Quick-dry shorts, a t-shirt, water shoes or old sneakers. Bring sunscreen, a hat, a water bottle, and a towel. Leave the phone in the car (or accept its fate).</div>
+            </details>
+            <details className="faq-item">
+              <summary>Where exactly is Maxwell Place?</summary>
+              <div className="ans">Maxwell Place Park, Hoboken waterfront, near the intersection of Frank Sinatra Drive and Maxwell Place. Look for the orange shipping container and a pile of kayaks. About 12 minutes' walk from the Hoboken PATH station.</div>
+            </details>
+            <details className="faq-item">
+              <summary>What if it rains?</summary>
+              <div className="ans">Light rain — we usually still go. Thunder, lightning, or small-craft advisory — we cancel. Check our Instagram (@hobocobo) by 8am on the day. We'll always post.</div>
+            </details>
+            <details className="faq-item">
+              <summary>Can I bring my dog?</summary>
+              <div className="ans">Dogs are welcome at the park, but not in the boats. If you're paddling, leave your pup on land with a friend.</div>
+            </details>
+          </div>
+        </section>
+
+        <section className="donate">
+          <div className="container">
+            <div>
+              <h3 className="display">Free for the public.<br />Paid for by <em>you</em>.</h3>
+              <p style={{fontSize:"18px",margin:"24px 0 0",maxWidth:"50ch",opacity:.95}}>Every kayak costs $1,200. Every paddle, $90. Every PFD, $80. We run entirely on donations and volunteer hours — no city funding, no membership dues. If a paddle day made your week, it would mean a lot.</p>
+            </div>
+            <div className="donate-card">
+              <div className="donate-amts">
+                {[25, 50, 100, 250].map(v => (
+                  <button key={v} className={amt === v ? "on" : ""} onClick={() => setAmt(v)}>${v}</button>
+                ))}
+              </div>
+              <button className="btn" onClick={() => setDonateOpen(true)}>Donate ${amt}</button>
+              <div className="meta">501(c)(3) · TAX DEDUCTIBLE · EIN ON FILE</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="container map-section" id="visit">
+          <div className="sh">
+            <div>
+              <span className="eyebrow">Visit</span>
+              <h3 className="display">Maxwell<br />Place Park.</h3>
+            </div>
+            <p className="aside">On the Hoboken waterfront. 12 min walk from PATH, a longer one from anywhere else, but worth it.</p>
+          </div>
+          <div className="map-wrap">
+            <svg viewBox="0 0 800 440" preserveAspectRatio="none">
+              <defs>
+                <pattern id="water" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M0 10 Q5 6 10 10 T20 10" fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="1"/>
+                </pattern>
+              </defs>
+              <rect width="800" height="440" fill="url(#water)" />
+              <path d="M0 80 L300 80 L320 120 L320 200 L340 220 L340 320 L0 320 Z" fill="rgba(244,236,217,.95)" opacity=".95"/>
+              <path d="M800 0 L800 440 L420 440 L420 80 L800 80 Z" fill="rgba(244,236,217,.95)" opacity=".95"/>
+              <text x="160" y="240" fill="#0c1f33" fontFamily="JetBrains Mono" fontSize="11" letterSpacing="2">HOBOKEN, NJ</text>
+              <text x="580" y="240" fill="#0c1f33" fontFamily="JetBrains Mono" fontSize="11" letterSpacing="2">MANHATTAN</text>
+              <text x="360" y="40" fill="#fff" fontFamily="JetBrains Mono" fontSize="10" letterSpacing="2">HUDSON RIVER ↑</text>
+              <path d="M340 220 Q380 200 380 240 Q380 280 340 280 Z" fill="rgba(29,111,166,.3)" stroke="rgba(255,255,255,.4)" strokeWidth="1.5" strokeDasharray="4 4"/>
+              <text x="345" y="305" fill="#fff" fontFamily="JetBrains Mono" fontSize="9" letterSpacing="1.5">THE COVE</text>
+            </svg>
+            <div className="pin" style={{top:"230px", left:"330px"}}>★</div>
+            <div className="label" style={{top:"15px",left:"15px"}}>● LIVE</div>
+            <div className="label" style={{top:"15px",right:"15px"}}>40.7488° N · 74.0245° W</div>
+            <div className="label" style={{bottom:"15px",left:"15px"}}>FIG. 01 · MAXWELL PLACE COVE</div>
+            <div className="label" style={{bottom:"15px",right:"15px",background:"var(--orange)"}}>HCCB BOATHOUSE</div>
+          </div>
+          <div className="map-info">
+            <span>1 MAXWELL PL · HOBOKEN, NJ 07030</span>
+            <span>12 MIN FROM HOBOKEN PATH</span>
+            <span>STREET PARKING ON SINATRA DR</span>
+          </div>
+        </section>
+
+        <footer>
+          <div className="container">
+            <div className="grid">
+              <div>
+                <p className="big">Get in<br />a <em>boat.</em></p>
+                <p style={{color:"rgba(244,236,217,.6)",margin:0,maxWidth:"40ch"}}>Hoboken Cove Community Boathouse<br />Maxwell Place Park · Hoboken, NJ<br />info@hobokencoveboathouse.org</p>
+                <div className="socials">
+                  <a href="#">IG</a>
+                  <a href="#">TT</a>
+                  <a href="#">FB</a>
+                  <a href="#">YT</a>
+                </div>
+              </div>
+              <div>
+                <h5>Get on the water</h5>
+                <ul>
+                  <li><a href="#rsvp">Free paddle days</a></li>
+                  <li><a href="#rsvp">River trips</a></li>
+                  <li><a href="#rsvp">Planet patrol</a></li>
+                  <li><a href="#rsvp">Hudson river cup</a></li>
+                </ul>
+              </div>
+              <div>
+                <h5>Helpful</h5>
+                <ul>
+                  <li><a href="#">Sign the waiver</a></li>
+                  <li><a href="#faq">FAQ</a></li>
+                  <li><a href="#volunteer">Become a volunteer</a></li>
+                  <li><a href="#">Donate</a></li>
+                </ul>
+              </div>
+              <div>
+                <h5>About</h5>
+                <ul>
+                  <li><a href="#">Our history</a></li>
+                  <li><a href="#">The board</a></li>
+                  <li><a href="#">Press kit</a></li>
+                  <li><a href="#">Contact</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="fine">
+              <span>© 2026 HCCB · 501(c)(3) · ALL RIGHTS</span>
+              <span>FREE FOREVER · POWERED BY VOLUNTEERS</span>
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      {donateOpen && (
+        <div className="modal-bg" onClick={() => setDonateOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="close" onClick={() => setDonateOpen(false)} aria-label="Close">×</button>
+            <span className="eyebrow">Donate · ${amt}</span>
+            <h3>Thanks for keeping us <em>afloat</em>.</h3>
+            <p>We're a 100% volunteer-run 501(c)(3). Pick whichever platform you like — every dollar buys boats, paddles, and PFDs for the next free paddle day.</p>
+            <div className="opts">
+              <a className="opt" href="https://givebutter.com/FXNJQR" target="_blank" rel="noopener">
+                <span className="ic gb">G</span>
+                <span><b>Givebutter</b><small>One-time or monthly · card, ApplePay, ACH</small></span>
+                <span className="arrow">→</span>
+              </a>
+              <a className="opt" href="https://www.biddingforgood.com/auction/AuctionHome.action?auctionId=370066308" target="_blank" rel="noopener">
+                <span className="ic bg">B</span>
+                <span><b>Bidding for Good</b><small>Annual silent auction · bid on river trips &amp; gear</small></span>
+                <span className="arrow">→</span>
+              </a>
+              <a className="opt" href="https://venmo.com/u/HobokenCoveBoathouse" target="_blank" rel="noopener">
+                <span className="ic vm">V</span>
+                <span><b>Venmo</b><small>@HobokenCoveBoathouse · quickest option</small></span>
+                <span className="arrow">→</span>
+              </a>
+            </div>
+            <div className="meta">501(c)(3) · Tax deductible · Receipt emailed</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
