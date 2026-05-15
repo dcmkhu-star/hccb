@@ -742,6 +742,80 @@ function LiveEvents() {
   );
 }
 
+// ── Client-side RSS fallback (used when Netlify function isn't available) ──
+const MEETUP_RSS = 'https://www.meetup.com/Hoboken-Cove-Community-Boathouse/events/rss/';
+
+function categorizeClient(name, desc = '') {
+  const t = (name + ' ' + desc).toLowerCase();
+  if (t.includes('planet patrol')) return 'patrol';
+  if (t.includes('liberty island') || t.includes('circumnavigation') ||
+      t.includes('brooklyn bridge') || t.includes('red hook') ||
+      t.includes('day trip') || (t.includes('trip') && t.includes('volunteer'))) return 'trips';
+  if (t.includes('help with our public program') ||
+      (t.includes('volunteer') && t.includes('free kayaking for everyone')) ||
+      t.includes('beach crew') || t.includes('boat crew') ||
+      t.includes('volunteer orientation') || t.includes('boat maintenance')) return 'volunteer';
+  if (t.includes('free kayak') || t.includes('paddle day') ||
+      t.includes('free public') || t.includes('free paddl') ||
+      (t.includes('maxwell') && !t.includes('volunteer'))) return 'paddle';
+  return 'training';
+}
+
+function parseClientRss(xml) {
+  const now = Date.now();
+  const events = [];
+  let rest = xml;
+
+  function btwn(str, a, b) {
+    const s = str.indexOf(a); if (s === -1) return null;
+    const e = str.indexOf(b, s + a.length); if (e === -1) return null;
+    return str.slice(s + a.length, e).trim();
+  }
+  function strip(html) {
+    return html.replace(/<[^>]*>/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<')
+               .replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
+  }
+  function toEastern(d) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone:'America/New_York', year:'numeric', month:'2-digit',
+      day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false,
+    }).formatToParts(d);
+    const g = type => parts.find(p => p.type === type)?.value || '00';
+    return {
+      date: `${g('year')}-${g('month')}-${g('day')}`,
+      time: `${String(parseInt(g('hour')) % 24).padStart(2,'0')}:${g('minute')}`,
+    };
+  }
+
+  while (events.length < 30) {
+    const s = rest.indexOf('<item>'); if (s === -1) break;
+    const e = rest.indexOf('</item>', s); if (e === -1) break;
+    const block = rest.slice(s + 6, e);
+    rest = rest.slice(e + 7);
+
+    const title = btwn(block,'<title><![CDATA[',']]></title>') ?? btwn(block,'<title>','</title>');
+    const link  = btwn(block,'<link><![CDATA[',']]></link>')   ?? btwn(block,'<link>','</link>')  ??
+                  btwn(block,'<guid><![CDATA[',']]></guid>')   ?? btwn(block,'<guid>','</guid>');
+    const pub   = btwn(block,'<pubDate>','</pubDate>');
+    const desc  = btwn(block,'<description><![CDATA[',']]></description>') ?? btwn(block,'<description>','</description>');
+
+    if (!title || !link || !pub) continue;
+    const dt = new Date(pub);
+    if (isNaN(dt) || dt.getTime() < now) continue;
+
+    const { date, time } = toEastern(dt);
+    const name = title.trim();
+    const description = desc ? strip(desc) : '';
+    events.push({
+      id: link, name, date, time, description,
+      url: link.trim(),
+      category: categorizeClient(name, description),
+      spots: null, totalSpots: null, rsvpCount: 0,
+    });
+  }
+  return events;
+}
+
 // ─────────────────────────────────────────────────────
 function App() {
   const [tab, setTab]           = useState("paddle");
@@ -750,20 +824,28 @@ function App() {
   const [amt, setAmt]           = useState(50);
   const [donateOpen, setDonateOpen] = useState(false);
 
-  // Fetch all Meetup events once on load, group by category
+  // Fetch all Meetup events once on load, group by category.
+  // Tries Netlify function first; falls back to CORS proxy for GitHub Pages / local preview.
   React.useEffect(() => {
+    function groupAndSet(data) {
+      if (!Array.isArray(data) || data.length === 0) return false;
+      const grouped = { paddle:[], trips:[], volunteer:[], patrol:[], training:[] };
+      data.forEach(e => { (grouped[e.category || 'training'] ||= []).push(e); });
+      grouped.paddle = grouped.paddle.slice(0, 6);
+      setLive(grouped);
+      return true;
+    }
+
+    // 1. Try the Netlify serverless function
     fetch('/.netlify/functions/meetup-events')
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(data => {
-        if (!Array.isArray(data)) throw new Error();
-        const grouped = { paddle:[], trips:[], volunteer:[], patrol:[], training:[] };
-        data.forEach(e => {
-          const cat = e.category || 'training';
-          (grouped[cat] = grouped[cat] || []).push(e);
-        });
-        grouped.paddle = grouped.paddle.slice(0, 6); // max 6 paddle days shown
-        setLive(grouped);
-      })
+      .then(r => r.ok ? r.json() : Promise.reject('no-function'))
+      .then(data => { if (!groupAndSet(data)) throw new Error('empty'); })
+      .catch(() =>
+        // 2. Fallback: fetch RSS via CORS proxy (works on GitHub Pages & local)
+        fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(MEETUP_RSS)}`)
+          .then(r => r.ok ? r.text() : Promise.reject('proxy-fail'))
+          .then(xml => groupAndSet(parseClientRss(xml)))
+      )
       .catch(() => {})
       .finally(() => setEvLoad(false));
   }, []);
