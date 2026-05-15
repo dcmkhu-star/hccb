@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>HCCB Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<style>
+:root{
+  --paper:#fbf6ec;--paper-2:#f1e9d6;--ink:#111111;--ink-2:#4a4a4a;
+  --orange:#f08a3f;--orange-deep:#c4651b;--teal:#41b5a1;--coral:#e63b5b;
+  --rule:#e7dcc4;--sidebar:#18171a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+code{font-family:"JetBrains Mono",monospace;font-size:.875em;background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px}
+
+/* ── Layout ── */
+.shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{background:var(--sidebar);color:var(--paper);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-brand{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:20px;margin:0 0 2px;letter-spacing:-.02em}
+.sb-brand h1 em{font-style:italic;color:var(--orange)}
+.sb-badge{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(251,246,236,.45)}
+.sb-nav{padding:12px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 24px;font-size:14px;font-weight:500;color:rgba(251,246,236,.6);cursor:pointer;border-left:3px solid transparent;transition:.15s}
+.nav-item:hover{color:var(--paper);background:rgba(255,255,255,.04)}
+.nav-item.on{color:var(--paper);border-left-color:var(--orange);background:rgba(240,138,63,.08)}
+.nav-item .ni{font-size:16px;width:20px;text-align:center}
+.sb-foot{padding:20px 24px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-email{font-family:"JetBrains Mono",monospace;font-size:11px;color:rgba(251,246,236,.4);margin-bottom:6px;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role-pill{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:3px 10px;border-radius:99px;font-weight:700;margin-bottom:12px}
+.role-pill.admin{background:var(--orange);color:#fff}
+.role-pill.editor{background:rgba(65,181,161,.25);color:var(--teal)}
+.role-pill.viewer{background:rgba(255,255,255,.08);color:rgba(251,246,236,.5)}
+.signout-btn{width:100%;background:transparent;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:10px;font-size:13px;color:rgba(251,246,236,.55);text-align:center;cursor:pointer;transition:.15s}
+.signout-btn:hover{background:rgba(230,59,91,.15);border-color:rgba(230,59,91,.35);color:var(--coral)}
+.main{padding:48px;overflow-y:auto}
+
+/* ── Panel header ── */
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange);font-weight:700;display:inline-flex;align-items:center;gap:10px;margin-bottom:8px}
+.eyebrow::before{content:"";width:24px;height:1.5px;background:var(--orange)}
+.panel-title{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:42px;letter-spacing:-.025em;margin:0 0 4px;line-height:1}
+.panel-sub{color:var(--ink-2);font-size:15px;margin:0 0 36px;max-width:60ch}
+
+/* ── Cards ── */
+.card{background:#fff;border:1.5px solid var(--ink);border-radius:8px;box-shadow:6px 6px 0 var(--ink);padding:28px;margin-bottom:20px}
+.card-title{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:20px;margin:0 0 6px;letter-spacing:-.015em}
+.card-sub{color:var(--ink-2);font-size:13px;margin:0 0 18px}
+.info-card{background:rgba(240,138,63,.06);border-color:rgba(240,138,63,.3);box-shadow:none}
+
+/* ── Form elements ── */
+.field{margin-bottom:16px}
+.label{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);font-weight:700;display:block;margin-bottom:7px}
+input[type=text],input[type=email],input[type=number],input[type=password],textarea,select{
+  width:100%;border:1.5px solid var(--rule);border-radius:6px;padding:11px 14px;
+  font-family:"DM Sans",sans-serif;font-size:14px;background:var(--paper);color:var(--ink);
+  outline:none;transition:.15s;box-sizing:border-box
+}
+input:focus,textarea:focus,select:focus{border-color:var(--ink)}
+textarea{resize:vertical;min-height:90px}
+.btn-row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.btn{padding:11px 22px;border-radius:99px;font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:0;transition:.1s}
+.btn-ink{background:var(--ink);color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.btn-ink:hover{background:var(--orange)}
+.btn-ink:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.3)}
+.btn-ink:disabled{background:var(--rule);color:var(--ink-2);box-shadow:none;cursor:wait}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--rule)}
+.btn-ghost:hover{border-color:var(--ink)}
+.btn-danger{background:transparent;color:var(--coral);border:1.5px solid rgba(230,59,91,.3)}
+.btn-danger:hover{background:rgba(230,59,91,.08)}
+
+/* ── Publish toggle ── */
+.pub-toggle{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:99px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;cursor:pointer;border:1.5px solid;transition:.15s;background:transparent}
+.pub-toggle.live{color:var(--teal);border-color:var(--teal);background:rgba(65,181,161,.08)}
+.pub-toggle.draft{color:var(--ink-2);border-color:var(--rule)}
+
+/* ── Status messages ── */
+.msg{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:10px 16px;border-radius:6px;margin-top:12px;display:inline-block}
+.msg.ok{background:rgba(65,181,161,.12);color:var(--teal)}
+.msg.err{background:rgba(230,59,91,.1);color:var(--coral)}
+
+/* ── Events rows ── */
+.ev-row{background:var(--paper);border:1.5px solid var(--rule);border-radius:8px;padding:16px 18px;margin-bottom:12px}
+.ev-row-top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:12px}
+.ev-name{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:16px;margin:0 0 2px}
+.ev-url{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-2);letter-spacing:.04em}
+.ev-fields{display:grid;grid-template-columns:100px 100px 1fr auto;gap:10px;align-items:end}
+.mini-bar{height:7px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;margin-top:8px}
+.mini-bar span{display:block;height:100%;border-radius:99px;transition:.4s}
+
+/* ── Live preview ── */
+.preview-bar{background:var(--teal);color:#fff;padding:13px 22px;border-radius:8px;font-size:14px;font-weight:500;margin-top:12px;border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
+
+/* ── Users table ── */
+.utbl{width:100%;border-collapse:separate;border-spacing:0 8px}
+.utbl th{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);padding:0 14px 8px;text-align:left;border-bottom:1.5px solid var(--rule)}
+.utbl td{padding:13px 14px;background:#fff;font-size:14px;border-top:1.5px solid var(--rule);border-bottom:1.5px solid var(--rule)}
+.utbl td:first-child{border-left:1.5px solid var(--rule);border-radius:6px 0 0 6px}
+.utbl td:last-child{border-right:1.5px solid var(--rule);border-radius:0 6px 6px 0}
+.rp{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:99px;font-weight:700}
+.rp.admin{background:var(--orange);color:#fff}
+.rp.editor{background:rgba(65,181,161,.2);color:var(--teal)}
+.rp.viewer{background:rgba(0,0,0,.07);color:var(--ink-2)}
+
+/* ── Login ── */
+.login-wrap{min-height:100vh;display:grid;place-items:center;background:var(--sidebar)}
+.login-box{background:var(--paper);border:1.5px solid rgba(255,255,255,.06);border-radius:10px;box-shadow:14px 14px 0 rgba(255,255,255,.05);padding:48px;width:100%;max-width:400px}
+.login-box h1{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:56px;margin:0 0 2px;line-height:.9;letter-spacing:-.03em}
+.login-box h1 em{font-style:italic;color:var(--orange)}
+.login-box .sub{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 32px}
+.login-btn{width:100%;background:var(--orange);color:#fff;border:0;padding:15px;border-radius:99px;font-family:"DM Sans",sans-serif;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 5px 0 var(--orange-deep);transition:.1s;letter-spacing:.03em;text-transform:uppercase}
+.login-btn:active{transform:translateY(2px);box-shadow:0 3px 0 var(--orange-deep)}
+.login-btn:disabled{background:var(--rule);box-shadow:none;cursor:wait}
+
+/* ── Setup warning ── */
+.setup-warn{background:rgba(230,59,91,.06);border:1.5px solid rgba(230,59,91,.25);border-radius:6px;padding:14px 16px;font-size:13px;color:#7a1530;margin-bottom:20px;line-height:1.5}
+
+/* ── Loading spinner ── */
+.loading{display:grid;place-items:center;height:100vh;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:rgba(0,0,0,.3)}
+.dot-pulse{width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px rgba(240,138,63,.25);animation:pulse 1.8s infinite;margin:0 auto 16px}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(240,138,63,.25)}50%{box-shadow:0 0 0 8px rgba(240,138,63,.04)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ══════════════════════════════════════════════════════════════
+// CONFIG — replace with your Supabase project values
+// Find them at: supabase.com → your project → Settings → API
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+const READY = !SUPABASE_URL.startsWith('YOUR_');
+const sb    = READY ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+const { useState, useEffect } = React;
+
+// ── Helpers ───────────────────────────────────────────────────
+function flash(set, type, text, ms = 3500) {
+  set({ type, text });
+  setTimeout(() => set(null), ms);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Root — auth state machine
+// ══════════════════════════════════════════════════════════════
+function App() {
+  const [phase, setPhase]     = useState('boot'); // boot | login | dash
+  const [user, setUser]       = useState(null);
+  const [userRole, setUserRole] = useState(null);
+
+  async function loadRole(u) {
+    const { data } = await sb.from('user_roles').select('*').eq('id', u.id).single();
+    setUserRole(data);
+    setPhase('dash');
+  }
+
+  useEffect(() => {
+    if (!READY) { setPhase('login'); return; }
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) { setUser(session.user); loadRole(session.user); }
+      else setPhase('login');
+    });
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_, session) => {
+      if (session) { setUser(session.user); loadRole(session.user); }
+      else { setUser(null); setUserRole(null); setPhase('login'); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (phase === 'boot') return (
+    <div className="loading"><div className="dot-pulse" /><div>Loading…</div></div>
+  );
+  if (phase === 'login') return (
+    <LoginPage onSuccess={u => { setUser(u); loadRole(u); }} />
+  );
+  return (
+    <Dashboard
+      user={user}
+      userRole={userRole}
+      onSignOut={() => sb.auth.signOut()}
+    />
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Login
+// ══════════════════════════════════════════════════════════════
+function LoginPage({ onSuccess }) {
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!READY) { setError('Supabase not configured yet. See setup instructions.'); return; }
+    setLoading(true); setError('');
+    const { data, error: err } = await sb.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    onSuccess(data.user);
+  }
+
+  return (
+    <div className="login-wrap">
+      <div className="login-box">
+        <h1>HCCB<br /><em>Admin</em></h1>
+        <p className="sub">Hoboken Cove Community Boathouse</p>
+        {!READY && (
+          <div className="setup-warn">
+            ⚠ Supabase not configured. Open <code>admin/index.html</code> and
+            replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code>.
+          </div>
+        )}
+        <form onSubmit={submit}>
+          <div className="field">
+            <label className="label">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" required autoFocus />
+          </div>
+          <div className="field">
+            <label className="label">Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required />
+          </div>
+          {error && <div className="msg err">{error}</div>}
+          <button className="login-btn" type="submit" disabled={loading} style={{marginTop:20}}>
+            {loading ? 'Signing in…' : 'Sign In →'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Dashboard shell
+// ══════════════════════════════════════════════════════════════
+function Dashboard({ user, userRole, onSignOut }) {
+  const role = userRole?.role || 'viewer';
+  const [view, setView] = useState('announcements');
+
+  const nav = [
+    { id: 'announcements', label: 'Announcements', icon: '📣' },
+    { id: 'events',        label: 'Events Status',  icon: '🚣' },
+    ...(role === 'admin' ? [{ id: 'users', label: 'Users & Roles', icon: '👥' }] : []),
+  ];
+
+  return (
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="sb-brand">
+          <h1>HCCB <em>Admin</em></h1>
+          <div className="sb-badge">Content Manager</div>
+        </div>
+        <nav className="sb-nav">
+          {nav.map(n => (
+            <div key={n.id} className={'nav-item' + (view === n.id ? ' on' : '')}
+              onClick={() => setView(n.id)}>
+              <span className="ni">{n.icon}</span>{n.label}
+            </div>
+          ))}
+        </nav>
+        <div className="sb-foot">
+          <div className="sb-email">{user?.email}</div>
+          <div className={"role-pill " + role}>{role}</div>
+          <button className="signout-btn" onClick={onSignOut}>Sign out</button>
+        </div>
+      </aside>
+
+      <main className="main">
+        {view === 'announcements' && <AnnouncementsPanel role={role} userId={user?.id} />}
+        {view === 'events'        && <EventsPanel role={role} userId={user?.id} />}
+        {view === 'users' && role === 'admin' && <UsersPanel />}
+      </main>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Announcements
+// ══════════════════════════════════════════════════════════════
+function AnnouncementsPanel({ role, userId }) {
+  const canEdit = role === 'admin' || role === 'editor';
+  const [ann, setAnn]       = useState(null);
+  const [draft, setDraft]   = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg]       = useState(null);
+
+  async function load() {
+    const { data } = await sb.from('announcements').select('*')
+      .order('id', { ascending: false }).limit(1).single();
+    setAnn(data);
+    setDraft(data?.content || '');
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function save() {
+    setSaving(true);
+    const now = new Date().toISOString();
+    const { error } = ann?.id
+      ? await sb.from('announcements').update({ content: draft, updated_at: now, updated_by: userId }).eq('id', ann.id)
+      : await sb.from('announcements').insert({ content: draft, updated_by: userId });
+    setSaving(false);
+    if (error) flash(setMsg, 'err', error.message);
+    else { flash(setMsg, 'ok', 'Saved.'); load(); }
+  }
+
+  async function togglePublish() {
+    const { error } = await sb.from('announcements')
+      .update({ is_published: !ann.is_published }).eq('id', ann.id);
+    if (!error) load();
+  }
+
+  if (loading) return <div className="loading"><div className="dot-pulse" /><div>Loading…</div></div>;
+
+  return (
+    <div>
+      <div className="eyebrow">Content</div>
+      <h2 className="panel-title">Announcements</h2>
+      <p className="panel-sub">
+        The live announcement banner on the homepage. Publish it to show it; unpublish to hide.
+      </p>
+
+      <div className="card">
+        <div className="card-title">Homepage Banner</div>
+        <p className="card-sub">Appears as a teal bar above the hero when published.</p>
+        <div className="field">
+          <label className="label">Message text</label>
+          <textarea
+            rows={3}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            placeholder="⛵ Season opens May 17 — RSVP now to hold your spot."
+            disabled={!canEdit}
+          />
+        </div>
+        {msg && <div className={"msg " + msg.type}>{msg.text}</div>}
+        {canEdit ? (
+          <div className="btn-row">
+            <button className="btn btn-ink" onClick={save} disabled={saving}>
+              {saving ? 'Saving…' : 'Save draft'}
+            </button>
+            {ann?.id && (
+              <button className={"pub-toggle " + (ann.is_published ? 'live' : 'draft')}
+                onClick={togglePublish}>
+                {ann.is_published ? '● Live' : '○ Draft — click to publish'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <p style={{color:'var(--ink-2)',fontSize:'13px',marginTop:'12px',fontStyle:'italic'}}>
+            You have view-only access. Ask an admin to edit.
+          </p>
+        )}
+      </div>
+
+      {ann?.is_published && ann?.content && (
+        <div>
+          <div className="label" style={{marginBottom:10}}>Live preview</div>
+          <div className="preview-bar">{ann.content}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Events Status
+// ══════════════════════════════════════════════════════════════
+function EventsPanel({ role, userId }) {
+  const canEdit = role === 'admin' || role === 'editor';
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(null);
+  const [msg, setMsg]         = useState(null);
+  const [newUrl, setNewUrl]   = useState('');
+  const [newName, setNewName] = useState('');
+
+  async function load() {
+    const { data } = await sb.from('event_meta').select('*')
+      .order('updated_at', { ascending: false });
+    setEvents(data || []);
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+
+  function patch(id, field, value) {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e));
+  }
+
+  async function save(ev) {
+    setSaving(ev.id);
+    const { error } = await sb.from('event_meta').update({
+      total_spots: Number(ev.total_spots),
+      rsvp_count:  Number(ev.rsvp_count),
+      status:      ev.status,
+      updated_at:  new Date().toISOString(),
+      updated_by:  userId,
+    }).eq('id', ev.id);
+    setSaving(null);
+    if (error) flash(setMsg, 'err', error.message);
+    else flash(setMsg, 'ok', `"${ev.event_name}" saved.`);
+  }
+
+  async function addEvent() {
+    if (!newUrl.trim() || !newName.trim()) return;
+    const { error } = await sb.from('event_meta').upsert({
+      meetup_url: newUrl.trim(), event_name: newName.trim(),
+      total_spots: 0, rsvp_count: 0, status: 'open', updated_by: userId,
+    }, { onConflict: 'meetup_url' });
+    if (error) { flash(setMsg, 'err', error.message); return; }
+    setNewUrl(''); setNewName('');
+    load();
+  }
+
+  async function remove(id, name) {
+    if (!confirm(`Remove "${name}" from the tracker?`)) return;
+    await sb.from('event_meta').delete().eq('id', id);
+    load();
+  }
+
+  const barStyle = (status, pct) => ({
+    width: status === 'open' ? `${pct}%` : '100%',
+    background: status === 'closed' ? 'var(--coral)'
+              : status === 'waitlist' ? 'var(--orange)'
+              : pct > 80 ? 'var(--orange)' : 'var(--teal)',
+  });
+
+  if (loading) return <div className="loading"><div className="dot-pulse" /><div>Loading…</div></div>;
+
+  return (
+    <div>
+      <div className="eyebrow">Live status</div>
+      <h2 className="panel-title">Events Status</h2>
+      <p className="panel-sub">
+        Set RSVP counts and open/waitlist/closed status for each Meetup event.
+        The main site shows color-coded bars — green (spots open), orange (waitlist), red (closed).
+      </p>
+
+      {/* Legend */}
+      <div style={{display:'flex',gap:20,marginBottom:24,flexWrap:'wrap'}}>
+        {[['var(--teal)','Open'],['var(--orange)','Waitlisted'],['var(--coral)','Closed']].map(([c,l]) => (
+          <div key={l} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'var(--ink-2)'}}>
+            <span style={{width:28,height:8,borderRadius:99,background:c,display:'inline-block'}} />{l}
+          </div>
+        ))}
+      </div>
+
+      {msg && <div className={"msg " + msg.type} style={{marginBottom:16}}>{msg.text}</div>}
+
+      {events.length === 0 && (
+        <div className="card" style={{textAlign:'center',color:'var(--ink-2)',padding:'40px 28px'}}>
+          No events tracked yet. Add one below.
+        </div>
+      )}
+
+      {events.map(e => {
+        const pct = e.total_spots > 0 ? Math.min(100, (e.rsvp_count / e.total_spots) * 100) : 0;
+        return (
+          <div key={e.id} className="ev-row">
+            <div className="ev-row-top">
+              <div>
+                <p className="ev-name">{e.event_name}</p>
+                <a href={e.meetup_url} target="_blank" rel="noopener" className="ev-url">{e.meetup_url}</a>
+                <div className="mini-bar"><span style={barStyle(e.status, pct)} /></div>
+                <div style={{fontSize:11,color:'var(--ink-2)',marginTop:4,fontFamily:'JetBrains Mono',letterSpacing:'.06em'}}>
+                  {e.rsvp_count}/{e.total_spots} · {e.status}
+                </div>
+              </div>
+              {canEdit && (
+                <button className="btn btn-danger" onClick={() => remove(e.id, e.event_name)}
+                  style={{padding:'8px 14px',flexShrink:0}}>Remove</button>
+              )}
+            </div>
+            <div className="ev-fields">
+              <div>
+                <label className="label">Total spots</label>
+                <input type="number" value={e.total_spots} min={0}
+                  onChange={ev => patch(e.id, 'total_spots', ev.target.value)} disabled={!canEdit} />
+              </div>
+              <div>
+                <label className="label">RSVPs</label>
+                <input type="number" value={e.rsvp_count} min={0}
+                  onChange={ev => patch(e.id, 'rsvp_count', ev.target.value)} disabled={!canEdit} />
+              </div>
+              <div>
+                <label className="label">Status</label>
+                <select value={e.status}
+                  onChange={ev => patch(e.id, 'status', ev.target.value)} disabled={!canEdit}
+                  style={{background: e.status==='open' ? 'rgba(65,181,161,.08)'
+                                    : e.status==='waitlist' ? 'rgba(240,138,63,.08)'
+                                    : 'rgba(230,59,91,.08)'}}>
+                  <option value="open">Open — spots available</option>
+                  <option value="waitlist">Waitlist — event full</option>
+                  <option value="closed">Closed — registration closed</option>
+                </select>
+              </div>
+              {canEdit && (
+                <button className="btn btn-ink" onClick={() => save(e)} disabled={saving === e.id}>
+                  {saving === e.id ? '…' : 'Save'}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {canEdit && (
+        <div className="card" style={{marginTop:8}}>
+          <div className="card-title">Add event</div>
+          <p className="card-sub">Paste the Meetup event URL and give it a label.</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+            <div className="field" style={{marginBottom:0}}>
+              <label className="label">Meetup event URL</label>
+              <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)}
+                placeholder="https://www.meetup.com/…/events/123456789/" />
+            </div>
+            <div className="field" style={{marginBottom:0}}>
+              <label className="label">Event name</label>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="Free Paddle Day — May 17" />
+            </div>
+          </div>
+          <button className="btn btn-ink" onClick={addEvent}
+            disabled={!newUrl.trim() || !newName.trim()}>Add event</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Users & Roles (admin only)
+// ══════════════════════════════════════════════════════════════
+function UsersPanel() {
+  const [users, setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg]       = useState(null);
+
+  useEffect(() => {
+    sb.from('user_roles').select('*').then(({ data }) => {
+      setUsers(data || []); setLoading(false);
+    });
+  }, []);
+
+  async function changeRole(id, role) {
+    const { error } = await sb.from('user_roles').update({ role }).eq('id', id);
+    if (error) flash(setMsg, 'err', error.message);
+    else {
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+      flash(setMsg, 'ok', 'Role updated.');
+    }
+  }
+
+  return (
+    <div>
+      <div className="eyebrow">Admin only</div>
+      <h2 className="panel-title">Users & Roles</h2>
+      <p className="panel-sub">Manage who can log in and what they can edit.</p>
+
+      <div className="card info-card" style={{marginBottom:24}}>
+        <div className="card-title" style={{fontSize:17}}>How to invite someone</div>
+        <ol style={{color:'var(--ink-2)',fontSize:14,lineHeight:1.9,margin:'8px 0 0',paddingLeft:18}}>
+          <li>Go to <strong>supabase.com → your project → Authentication → Users</strong></li>
+          <li>Click <strong>Invite user</strong> and enter their email</li>
+          <li>They get an email to set their password and log in</li>
+          <li>Come back here → their row appears below → set their role</li>
+        </ol>
+        <p style={{fontSize:13,color:'var(--ink-2)',margin:'12px 0 0'}}>
+          <strong>Admin</strong> — full access, can publish anything, manage users<br/>
+          <strong>Editor</strong> — can edit announcements and events status, cannot manage users<br/>
+          <strong>Viewer</strong> — can log in and preview drafts, cannot edit anything
+        </p>
+      </div>
+
+      {msg && <div className={"msg " + msg.type} style={{marginBottom:16}}>{msg.text}</div>}
+
+      {loading ? (
+        <div className="loading" style={{height:'auto',padding:'40px 0'}}><div className="dot-pulse" /></div>
+      ) : (
+        <div className="card" style={{padding:0,overflow:'hidden'}}>
+          <table className="utbl" style={{margin:0}}>
+            <thead>
+              <tr>
+                <th style={{paddingLeft:20}}>Email</th>
+                <th>Name</th>
+                <th>Current role</th>
+                <th style={{paddingRight:20}}>Change role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id}>
+                  <td style={{paddingLeft:20}}><code>{u.email || u.id.slice(0,8) + '…'}</code></td>
+                  <td>{u.full_name || '—'}</td>
+                  <td><span className={"rp " + u.role}>{u.role}</span></td>
+                  <td style={{paddingRight:20}}>
+                    <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
+                      style={{width:'auto',padding:'6px 10px',fontSize:13}}>
+                      <option value="admin">Admin</option>
+                      <option value="editor">Editor</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={4} style={{textAlign:'center',color:'var(--ink-2)',
+                    fontStyle:'italic',padding:'32px',border:'1.5px solid var(--rule)',borderRadius:6}}>
+                    No users yet — invite one from the Supabase dashboard.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

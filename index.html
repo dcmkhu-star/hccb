@@ -10,6 +10,7 @@
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --paper:#fbf6ec;
@@ -421,6 +422,17 @@
   .modal .opt .arrow{font-size:22px;color:var(--ink-2)}
   .modal .meta{margin-top:18px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
 
+  /* ANNOUNCEMENT BANNER */
+  .ann-banner{background:var(--teal);color:#fff;padding:13px 32px;font-size:14px;font-weight:500;text-align:center;border-bottom:1.5px solid var(--teal-deep);animation:fadeDown .3s ease-out}
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+  /* EVENT STATUS BADGES */
+  .ev-badge{display:inline-flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:99px;font-weight:700;margin-bottom:8px}
+  .ev-badge-waitlist{background:rgba(240,138,63,.15);color:var(--orange)}
+  .ev-badge-closed{background:rgba(230,59,91,.12);color:var(--coral)}
+  .event-register-btn.waitlist{background:var(--orange) !important}
+  .event-register-btn.closed{background:var(--rule);color:var(--ink-2);cursor:not-allowed;box-shadow:none;opacity:.75;pointer-events:none}
+
   /* MEETUP LIVE EVENTS */
   .meetup-events{padding:120px 0;border-top:1.5px solid var(--rule)}
   .events-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
@@ -480,6 +492,30 @@
 <div id="root"></div>
 
 <script type="text/babel">
+// ── CMS config ────────────────────────────────────────────────
+// Replace with your Supabase values: supabase.com → Project Settings → API
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const sb = (!SUPABASE_URL.startsWith('YOUR_'))
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+// ── Announcement banner ───────────────────────────────────────
+function AnnouncementBanner() {
+  const [text, setText] = React.useState(null);
+  React.useEffect(() => {
+    if (!sb) return;
+    sb.from('announcements').select('content')
+      .eq('is_published', true)
+      .order('id', { ascending: false })
+      .limit(1).single()
+      .then(({ data }) => { if (data?.content) setText(data.content); });
+  }, []);
+  if (!text) return null;
+  return <div className="ann-banner">{text}</div>;
+}
+
+// ─────────────────────────────────────────────────────────────
 const { useState, useMemo } = React;
 
 // ─── data ─────────────────────────────────────
@@ -562,7 +598,7 @@ function Session({ s, rsvped, onRsvp }) {
 }
 
 // ─── Meetup live events ──────────────────────────────
-function EventCard({ event }) {
+function EventCard({ event, meta }) {
   const { date, month, dow, timeLabel } = React.useMemo(() => {
     const d = new Date(event.date + 'T' + (event.time || '00:00'));
     return {
@@ -577,10 +613,21 @@ function EventCard({ event }) {
     };
   }, [event.date, event.time]);
 
-  const spotsLeft = event.spots;
-  const pct = (event.totalSpots && spotsLeft !== null)
-    ? Math.max(0, (spotsLeft / event.totalSpots) * 100)
-    : null;
+  // CMS-managed RSVP status
+  const status     = meta?.status || null;            // 'open' | 'waitlist' | 'closed' | null
+  const rsvpCount  = meta?.rsvp_count  || 0;
+  const totalSpots = meta?.total_spots || 0;
+  const hasStatus  = meta && totalSpots > 0;
+  const pct        = hasStatus ? Math.min(100, (rsvpCount / totalSpots) * 100) : 0;
+  const spotsLeft  = totalSpots - rsvpCount;
+
+  const barBg = status === 'closed'   ? 'var(--coral)'
+              : status === 'waitlist' ? 'var(--orange)'
+              : pct > 80              ? 'var(--orange)' : 'var(--algae)';
+
+  const btnLabel = status === 'waitlist' ? 'Join Waitlist →'
+                 : status === 'closed'   ? 'Registration Closed'
+                 : 'Register on Meetup →';
 
   return (
     <article className="event-card">
@@ -597,26 +644,34 @@ function EventCard({ event }) {
       </div>
       <div className="event-card-body">
         {event.description && <p className="event-desc">{event.description}</p>}
-        {spotsLeft !== null && event.totalSpots && (
+
+        {hasStatus && (
           <div>
+            {status === 'waitlist' && <div className="ev-badge ev-badge-waitlist">⚠ Waitlisted</div>}
+            {status === 'closed'   && <div className="ev-badge ev-badge-closed">✕ Registration Closed</div>}
             <div className="event-spots-row">
-              <span>{spotsLeft} spots left</span>
-              <span>{event.rsvpCount} going</span>
+              <span>
+                {status === 'open'     ? `${spotsLeft} spots left`
+               : status === 'waitlist' ? 'Event full — waitlist open'
+               :                        'No spots available'}
+              </span>
+              <span>{rsvpCount} / {totalSpots} registered</span>
             </div>
             <div className="event-spots-bar">
               <span style={{
-                width: `${pct}%`,
-                background: spotsLeft <= 5 ? 'var(--orange)' : 'var(--algae)'
+                width: status === 'open' ? `${pct}%` : '100%',
+                background: barBg,
               }} />
             </div>
           </div>
         )}
+
         <a
-          href={event.url}
-          target="_blank"
+          href={status === 'closed' ? undefined : event.url}
+          target={status === 'closed' ? undefined : '_blank'}
           rel="noopener noreferrer"
-          className="event-register-btn">
-          Register on Meetup →
+          className={"event-register-btn" + (status === 'waitlist' ? ' waitlist' : status === 'closed' ? ' closed' : '')}>
+          {btnLabel}
         </a>
       </div>
     </article>
@@ -624,22 +679,39 @@ function EventCard({ event }) {
 }
 
 function LiveEvents() {
-  const [status, setStatus] = React.useState({ events: null, loading: true, error: null });
+  const [evState, setEvState] = React.useState({ events: null, loading: true, error: null });
+  const [metaMap, setMetaMap] = React.useState({});
 
   React.useEffect(() => {
-    fetch('/.netlify/functions/meetup-events')
-      .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(data => {
-        if (data.error) throw new Error(data.error);
-        setStatus({ events: data, loading: false, error: null });
-      })
-      .catch(err => setStatus({ events: null, loading: false, error: err.message }));
+    const eventsP = fetch('/.netlify/functions/meetup-events')
+      .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+      .catch(() => ({ error: 'Could not load events' }));
+
+    const metaP = sb
+      ? sb.from('event_meta').select('*').then(({ data }) => data || [])
+      : Promise.resolve([]);
+
+    Promise.all([eventsP, metaP]).then(([evData, metaData]) => {
+      // Build lookup: meetup_url → meta row
+      const map = {};
+      metaData.forEach(m => { map[m.meetup_url] = m; });
+      setMetaMap(map);
+
+      if (evData?.error) setEvState({ events: null, loading: false, error: evData.error });
+      else setEvState({ events: evData, loading: false, error: null });
+    });
   }, []);
 
-  const { events, loading, error } = status;
+  // Match event URL to a meta row (exact first, then partial)
+  function getMeta(event) {
+    if (metaMap[event.url]) return metaMap[event.url];
+    const key = Object.keys(metaMap).find(u =>
+      event.url.includes(u.split('/events/')[1] || '__none__')
+    );
+    return key ? metaMap[key] : null;
+  }
+
+  const { events, loading, error } = evState;
   const empty = !loading && (!events || events.length === 0);
 
   return (
@@ -671,7 +743,9 @@ function LiveEvents() {
             </p>
           </div>
         )}
-        {events && events.map(e => <EventCard key={e.id} event={e} />)}
+        {events && events.map(e => (
+          <EventCard key={e.id} event={e} meta={getMeta(e)} />
+        ))}
       </div>
     </section>
   );
@@ -703,6 +777,7 @@ function App() {
 
   return (
     <>
+      <AnnouncementBanner />
       <div className="ticker">
         <div className="row">
           <span className="live"><i className="dot"></i>OPEN FOR THE SEASON · NEXT PADDLE IN 3 DAYS</span>
