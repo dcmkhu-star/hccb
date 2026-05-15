@@ -677,7 +677,7 @@ function LiveEvents() {
   const [metaMap, setMetaMap] = React.useState({});
 
   React.useEffect(() => {
-    const eventsP = fetch('/.netlify/functions/meetup-events')
+    const eventsP = fetch('/api/meetup-events')
       .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
       .catch(() => ({ error: 'Could not load events' }));
 
@@ -843,8 +843,8 @@ function App() {
       return true;
     }
 
-    // 1. Try the Netlify serverless function
-    fetch('/.netlify/functions/meetup-events')
+    // 1. Try Vercel API route, fall back to Netlify function
+    fetch('/api/meetup-events')
       .then(r => r.ok ? r.json() : Promise.reject('no-function'))
       .then(data => { if (!groupAndSet(data)) throw new Error('empty'); })
       .catch(() =>
